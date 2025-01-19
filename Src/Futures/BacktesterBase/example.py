@@ -1,17 +1,9 @@
 import logging
 
-import bokeh.util.info
 import numpy as np
 import pandas as pd
 
 from Futures.BacktesterBase import *
-# from Futures.BacktesterBase import BrokerBase
-# from Futures.BacktesterBase import GroupBase
-# from Futures.BacktesterBase import InstrumentBase
-# from Futures.BacktesterBase import PortfolioBase
-# from Futures.BacktesterBase import ReportBase
-# from Futures.BacktesterBase import StrategyBase
-# from Futures.BacktesterBase import TradeBase
 
 
 class BacktesterX(BacktesterBase):
@@ -32,9 +24,6 @@ class PortfolioXYZ(PortfolioBase):
 
 
 class GroupX(GroupBase):
-    def __init__(self, name: str):
-        super().__init__(name)
-
     def check_state(self) -> bool:
         self.log.error("Check_state called")
         return (
@@ -43,6 +32,9 @@ class GroupX(GroupBase):
                 and self.backtester is not None
         )
 
+    def run(self):
+        pass
+
 
 class BrokerX(BrokerBase):
     def check_state(self) -> bool:
@@ -50,21 +42,71 @@ class BrokerX(BrokerBase):
 
 
 class StrategyX(StrategyBase):
-    def open(self, instrument, offset):
+
+    def open(self, instrument: InstrumentBase, idx):
         pass
 
-    def __init__(self, name: str):
-        super().__init__(name)
+    def high(self, instrument, idx):
+        pass
+
+    def low(self, instrument, idx):
+        pass
+
+    def close(self, instrument, idx):
+        pass
+
+    def volume(self, instrument, idx):
+        pass
+
+    def timestamp(self, instrument, idx):
+        pass
+
+    def is_roll(self, instrument):
+        pass
+
+    def init(self, idx: int, timestamp: pd.Timestamp):
+        pass
+
+    def next(self, idx: int, timestamp: pd.Timestamp):
+        pass
+
+    def last(self, idx: int, timestamp: pd.Timestamp):
+        pass
 
     def check_state(self) -> bool:
         return self.name != ''
 
 
 class StrategyY(StrategyBase):
-    def __init__(self, name: str):
-        super().__init__(name)
 
-    def open(self, instrument, offset):
+    def open(self, instrument: InstrumentBase, idx):
+        pass
+
+    def high(self, instrument, idx):
+        pass
+
+    def low(self, instrument, idx):
+        pass
+
+    def close(self, instrument, idx):
+        pass
+
+    def volume(self, instrument, idx):
+        pass
+
+    def timestamp(self, instrument, idx):
+        pass
+
+    def is_roll(self, instrument):
+        pass
+
+    def init(self, idx: int, timestamp: pd.Timestamp):
+        pass
+
+    def next(self, idx: int, timestamp: pd.Timestamp):
+        pass
+
+    def last(self, idx: int, timestamp: pd.Timestamp):
         pass
 
     def check_state(self) -> bool:
@@ -120,7 +162,7 @@ if __name__ == "__main__":
 
     gr.add_instrument(instrument_x).add_instrument(instrument_y)
 
-    ts = pd.Timestamp(year=2020, month=3, day=14)
+    ts = pd.Timestamp.min
     trade_x = TradeX(strategy_x, instrument_x, ts, 1000, ts, 2000, 1)
     trade_y = TradeX(strategy_y, instrument_y, ts, 1000, ts, 2000, -1)
 

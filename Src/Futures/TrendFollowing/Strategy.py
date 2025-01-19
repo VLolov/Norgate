@@ -9,6 +9,7 @@ from Futures.TrendFollowing.Future import Future
 
 class Trade:
     def __init__(self, entry_date, entry_price, position, stop_loss, margin, momentum, sector, symbol):
+
         # entry_date: pd.Timestamp = None, entry_price: float = 0, position: float = 0,
         #                  exit_date: [pd.Timestamp] = None, exit_price: float = 0, is_stop_loss: bool = False,
         #                  margin: float = 0

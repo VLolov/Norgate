@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
 
 from Futures.BacktesterBase.Base import Base
@@ -38,7 +38,6 @@ class GroupBase(Base, ABC):
         self.backtester = backtester
         return self
 
-    #
-    # @abstractmethod
-    # def run(self):
-    #     ...
+    @abstractmethod
+    def run(self):
+        ...

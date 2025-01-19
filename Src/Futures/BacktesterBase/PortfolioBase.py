@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC
 from typing import Optional, TYPE_CHECKING
-import numpy as np
 
 from Futures.BacktesterBase.Base import Base
 
@@ -15,11 +14,11 @@ class PortfolioBase(Base, ABC):
     # from Futures.BacktesterBase.BacktesterBase import BacktesterBase
     def __init__(self):
         super().__init__()
-        self.initial_capital: Optional[float] = np.nan
+        self.initial_capital: Optional[float] = None
         self.backtester: Optional[BacktesterBase] = None
 
     def check_state(self) -> bool:
-        return self.backtester is not None and self.initial_capital is not np.nan
+        return self.backtester is not None and self.initial_capital is not None
 
     def set_initial_capital(self, initial_capital: float):
         self.initial_capital = initial_capital

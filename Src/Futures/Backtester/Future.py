@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
@@ -13,8 +14,7 @@ from Futures.TrendFollowing.Future import Future as NorgateFuture
 from Futures.TrendFollowing.LoosePants import LoosePants
 
 
-
-class FutureNew(InstrumentBase):
+class Future(InstrumentBase):
     def check_state(self) -> bool:
         return True
 
@@ -31,7 +31,7 @@ class FutureNew(InstrumentBase):
 
     def __init__(self, symbol, metadata: MetaDataNew, data: pd.DataFrame):
         super().__init__(symbol, data)
-        self.metadata: FutureNew.MetaDataNew = metadata
+        self.metadata: Future.MetaDataNew = metadata
         self.first_date = data.index[0]
         self.last_date = data.index[-1]
 
@@ -39,33 +39,32 @@ class FutureNew(InstrumentBase):
         return [datetime.fromtimestamp(ts) for ts in self.data.index]
 
 
-def get_futures() -> List[FutureNew]:
+def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
     futures = NorgateFuture.all_futures_norgate(use_micro=True)
     futures_new = []
     min_date = pd.Timestamp.max
     max_date = pd.Timestamp.min
 
-    nr_futures_traded = 0
+    nr_futures = itertools.count(0)
     for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
-        nr_futures_traded += 1
-        if nr_futures_traded > 200:
+        if next(nr_futures) >= 200:
             break
         front = 1
         # print("Symbol", future.symbol, "Front", front)
 
         with duckdb.connect(DBConfig.DUCK_DB, read_only=True) as connection:
-            data_access = DataAccess(connection, '1020-01-01', '3021-01-01')
+            data_access = DataAccess(connection, start_date, end_date)
             data = LoosePants.get_data(data_access, future, front=front)
             # remove duckdb connection, as it cannot be pickled
             future.dta = None
 
-        meta = FutureNew.MetaDataNew()
+        meta = Future.MetaDataNew()
         attributes = ['symbol', 'name', 'sector', 'currency', 'exchange', 'big_point', 'margin', 'tick_size']
         for attr in attributes:
             value = getattr(future, attr)
             setattr(meta, attr, value)
 
-        future_new = FutureNew(future.symbol, meta, data)
+        future_new = Future(future.symbol, meta, data)
         futures_new.append(future_new)
         min_date = min(min_date, data.index[0])
         max_date = max(max_date, data.index[-1])

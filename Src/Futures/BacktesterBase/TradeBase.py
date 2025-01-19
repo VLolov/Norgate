@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 import pandas as pd
 
@@ -12,15 +11,15 @@ if TYPE_CHECKING:
     from .StrategyBase import StrategyBase
 
 
-class TradeBase(Base, ABC):
+class TradeBase(Base):
     def __init__(self,
-                 strategy: StrategyBase,
-                 instrument: InstrumentBase,
-                 entry_date: pd.Timestamp,
-                 entry_price: float,
-                 exit_date: pd.Timestamp,
-                 exit_price: float,
-                 position: float):
+                 strategy: StrategyBase = None,
+                 instrument: InstrumentBase = None,
+                 entry_date: pd.Timestamp = None,
+                 entry_price: float = 0.0,
+                 exit_date: Optional[pd.Timestamp] = None,
+                 exit_price: float = 0.0,
+                 position: float = 0.0):
 
         super().__init__()
         self.strategy = strategy

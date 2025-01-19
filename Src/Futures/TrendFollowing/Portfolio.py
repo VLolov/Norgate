@@ -81,12 +81,12 @@ class Config:
     MAX_MARGIN = 0.4            # % of portfolio; 0=don't check margin
     ATR_MUL = 5                 # 2 or 3 or 5  # !!!
     PERIOD = 11 * 21            # !!!
-    START_DATE = '2019-01-01'   # start of data: '1970-01-01' (1980-01-01)
+    START_DATE = '1019-01-01'   # start of data: '1970-01-01' (1980-01-01)
     END_DATE = '3015-04-01'
     USE_STOP_LOSS = True
     CUMULATIVE = True
     PATCH_MICRO = True
-    MULTI_PROCESSING = True
+    MULTI_PROCESSING = False
     SECTOR = ''
     BUY_AND_HOLD = False
     COST_CONTRACT = 2
@@ -167,6 +167,7 @@ def processing_task(f_d: List) -> List:
     strategy.run(future=future, data=data)
     strategy.calc_performance()
     return [future, data, strategy]
+
 
 def calc_strategies(cfg, verbose=True) -> List[LoosePants]:
     # calculate all strategies with 1 contract

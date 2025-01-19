@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, TYPE_CHECKING, List
 
 from .Base import Base
@@ -42,16 +42,22 @@ class BacktesterBase(Base, ABC):
             check = getattr(obj, "check_state", None)
             if callable(check):
                 state = check()
+                if not state:
+                    state = "*** " + str(state) + " ***"
             name = getattr(obj, "name", None)
             name = f'"{name}"' if name else ''
 
+            symbol = getattr(obj, "symbol", None)
+            symbol = f'"{symbol}"' if symbol else ''
+
             tabs = '\t' * lvl
-            print(f'{tabs} {obj} {name} {state}')
+            print(f'{tabs} {obj} {name} {symbol} {state}')
 
         level = 0
         log(self, level)
         level += 1
-        log(self.portfolio, level)
+        log(f'Portfolio:', level)
+        log(self.portfolio, level + 1)
 
         log(f'Reports ({len(self.reports)}):', level)
         level += 1
@@ -63,9 +69,9 @@ class BacktesterBase(Base, ABC):
             log(group, level)
             log(group.broker, level + 1)
 
-            log(f"Trades ({len(group.broker.trades)}):", level + 2)
-            for trade in group.broker.trades:
-                log(trade, level + 3)
+            # log(f"Trades ({len(group.broker.trades)}):", level + 2) @@@
+            # for trade in group.broker.trades:
+            #     log(trade, level + 3)
 
             log(f'Strategies ({len(group.strategies)}):', level - 1)
             for strategy in group.strategies:

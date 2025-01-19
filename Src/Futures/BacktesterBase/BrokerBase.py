@@ -22,12 +22,12 @@ class BrokerBase(Base, ABC):
         self.group = group
         return self
 
-    @property
-    def trades(self) -> List[TradeBase]:
-        return self._trades
-
-    def add_trade(self, trade: TradeBase):
-        self._trades.append(trade)
-        return self
+    # @property
+    # def trades(self) -> List[TradeBase]:
+    #     return self._trades
+    #
+    # def add_trade(self, trade: TradeBase):
+    #     self._trades.append(trade)
+    #     return self
 
 
