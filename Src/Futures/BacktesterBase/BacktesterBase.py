@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+from abc import ABC
+from typing import Optional, TYPE_CHECKING, List
+
+from .Base import Base
+
+if TYPE_CHECKING:
+    from .PortfolioBase import PortfolioBase
+    from .GroupBase import GroupBase
+    from .ReportBase import ReportBase
+
+
+class BacktesterBase(Base, ABC):
+    def check_state(self) -> bool:
+        return True
+
+    def __init__(self):
+        super().__init__()
+
+        self.portfolio: Optional[PortfolioBase] = None
+        self.groups: List[GroupBase] = []
+        self.reports: List[ReportBase] = []
+
+    def set_portfolio(self, portfolio: PortfolioBase):
+        self.portfolio = portfolio
+        self.log.info(f"Set portfolio object")
+        return self
+
+    def add_group(self, group: GroupBase):
+        self.groups.append(group)
+        return self
+
+    def add_report(self, report: ReportBase):
+        self.reports.append(report)
+        return self
+
+    def print_hierarchy(self):
+
+        def log(obj, lvl=0):
+            state = ''
+            check = getattr(obj, "check_state", None)
+            if callable(check):
+                state = check()
+            name = getattr(obj, "name", None)
+            name = f'"{name}"' if name else ''
+
+            tabs = '\t' * lvl
+            print(f'{tabs} {obj} {name} {state}')
+
+        level = 0
+        log(self, level)
+        level += 1
+        log(self.portfolio, level)
+
+        log(f'Reports ({len(self.reports)}):', level)
+        level += 1
+        for report in self.reports:
+            log(report, level)
+
+        log(f'Groups ({len(self.groups)}):', level - 1)
+        for group in self.groups:
+            log(group, level)
+            log(group.broker, level + 1)
+
+            log(f"Trades ({len(group.broker.trades)}):", level + 2)
+            for trade in group.broker.trades:
+                log(trade, level + 3)
+
+            log(f'Strategies ({len(group.strategies)}):', level - 1)
+            for strategy in group.strategies:
+                log(strategy, level)
+
+            log(f'Instruments ({len(group.instruments)}):', level - 1)
+            for instrument in group.instruments:
+                log(instrument, level)
+

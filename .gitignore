@@ -1,0 +1,8 @@
+/venv/
+__pycache__
+.idea
+*.db
+*.pickle
+*.duckdb
+*.sqlite
+~*
