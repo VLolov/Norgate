@@ -51,14 +51,13 @@ def main():
 
     bt.print_hierarchy()
 
-    with Timer(printer=log.info):
-        bt.run()
-        log.info("Ready")
+    bt.run()
 
 
 if __name__ == "__main__":
     log = logging.getLogger(__name__)
     log.handlers.clear()
 
-    logger(level=logging.INFO)
-    main()
+    logger(level=logging.DEBUG)
+    with Timer(printer=log.info):
+        main()

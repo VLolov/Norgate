@@ -40,6 +40,13 @@ class Future(InstrumentBase):
 
 
 def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
+    tradable_symbols_1000 = ['6A', '6B', '6C', '6E', '6J', '6M', 'BTC', 'CC', 'CL', 'CT', 'DC', 'DX',
+                             'EMD', 'ES', 'ETH', 'FCE', 'FDAX', 'FESX', 'FGBL', 'FGBM', 'FGBS', 'FOAT', 'FTDX',
+                             'GC', 'HE', 'HG', 'HTW', 'KE', 'LEU', 'LRC', 'LSU', 'NG', 'NKD', 'NQ', 'RTY', 'SB',
+                             # 'MWE' - couldnt find in IB
+                             'SCN', 'SI', 'SR3', 'TN', 'UB', 'VX', 'YM', 'ZC', 'ZF', 'ZL', 'ZN', 'ZO', 'ZQ', 'ZR', 'ZS',
+                             'ZT', 'ZW']
+
     futures = NorgateFuture.all_futures_norgate(use_micro=True)
     futures_new = []
     min_date = pd.Timestamp.max
@@ -47,8 +54,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
 
     nr_futures = itertools.count(0)
     for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
-        if next(nr_futures) >= 200:
-            break
+        # if next(nr_futures) <= 50:
+        #     continue
         front = 1
         # print("Symbol", future.symbol, "Front", front)
 
@@ -57,6 +64,16 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
             data = LoosePants.get_data(data_access, future, front=front)
             # remove duckdb connection, as it cannot be pickled
             future.dta = None
+
+        if future.symbol not in tradable_symbols_1000:
+            continue
+
+        if 'Micro' in future.name:
+            continue
+
+        if future.sector in ['Meat', 'Volatility']:
+            # skipped sectors
+            continue
 
         meta = Future.MetaDataNew()
         attributes = ['symbol', 'name', 'sector', 'currency', 'exchange', 'big_point', 'margin', 'tick_size']

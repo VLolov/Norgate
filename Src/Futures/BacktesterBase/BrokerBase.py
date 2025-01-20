@@ -16,7 +16,7 @@ class BrokerBase(Base, ABC):
         super().__init__()
         self.portfolio: Optional[PortfolioBase] = None
         self.group: Optional[GroupBase] = None
-        self._trades: List[TradeBase] = []
+        self._trades_selected: List[TradeBase] = []
 
     def set_group(self, group: GroupBase):
         self.group = group

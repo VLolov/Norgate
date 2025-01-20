@@ -1,8 +1,10 @@
+import typing
 from typing import List, Optional
 import pandas as pd
 from tqdm import tqdm
 
 import Futures.BacktesterBase as Bb
+from Futures.Backtester.Future import Future
 
 
 class Strategy(Bb.StrategyBase):
@@ -13,19 +15,25 @@ class Strategy(Bb.StrategyBase):
 
     def init(self, idx: int, timestamp: pd.Timestamp):
         self.log.debug(f"init({idx}, {timestamp})")
-        self.pbar = tqdm(total=len(self.instruments[0].data), desc='Processing days', colour='green')
+        # self.pbar = tqdm(total=len(self.instruments[0].data), desc='Processing days', colour='green')
 
     def next(self, idx: int, timestamp: pd.Timestamp):
-        self.pbar.update(1)
-
+        # self.pbar.update(1)
         self.log.debug(f"next({idx}, {timestamp})")
+
         for instrument in self.instruments:
-            self.log.debug(f"\t{instrument.symbol} "
-                           f"ohlc: {self.open(instrument,idx)}, "
-                           f"{self.high(instrument,idx)}, "
-                           f"{self.low(instrument,idx)}, "
-                           f"{self.close(instrument,idx)}"
-                           )
+            fut = typing.cast(Future, instrument)
+            if timestamp < fut.first_date or fut.last_date < timestamp:
+                # outside future's data range
+                self.log.debug(f"Skipping {fut.symbol}")
+
+        # for instrument in self.instruments:
+        #     self.log.debug(f"\t{instrument.symbol} "
+        #                    f"ohlc: {self.open(instrument,idx)}, "
+        #                    f"{self.high(instrument,idx)}, "
+        #                    f"{self.low(instrument,idx)}, "
+        #                    f"{self.close(instrument,idx)}"
+        #                    )
             for i in range(1):
                 symbol = instrument.symbol
                 open = self.open(instrument, idx)

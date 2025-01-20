@@ -19,7 +19,8 @@ class Broker(Bb.BrokerBase):
         self.use_stop_loss = False
         self.use_stop_orders = False  # stop loss as stop order or on close
 
-        self._trades: Dict[int, List[Trade]] = {}
+        self._trades: List[Trade] = []
+        self._trades_selected: Dict[int, List[Trade]] = {}
         self._current_trades: Dict[int, Trade] = {}
 
     def check_state(self) -> bool:
@@ -29,14 +30,18 @@ class Broker(Bb.BrokerBase):
     def _make_key(strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase) -> int:
         return strategy.id * 10000 + instrument.id
 
-    def trades(self, strategy, instrument) -> List[Trade]:
+    def trades(self) -> List[Trade]:
+        return self._trades
+
+    def trades_selected(self, strategy, instrument) -> List[Trade]:
         key = self._make_key(strategy, instrument)
-        return self._trades.get(key, [])
+        return self._trades_selected.get(key, [])
 
     def add_trade(self, strategy, instrument, trade):
         key = self._make_key(strategy, instrument)
-        arr = self._trades.get(key, [])
+        arr = self._trades_selected.get(key, [])
         arr.append(trade)
+        self._trades.append(trade)
 
     def get_current_trade(self, strategy, instrument):
         key = self._make_key(strategy, instrument)

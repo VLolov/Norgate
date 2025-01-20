@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 import Futures.BacktesterBase as Bb
 
 
@@ -7,7 +9,7 @@ class Group(Bb.GroupBase):
         for strategy in self.strategies:
             strategy.init(0, dates[0])
 
-        for idx, timestamp in enumerate(dates):
+        for idx, timestamp in enumerate(tqdm(dates, desc='Processing days', colour='green')):
             for strategy in self.strategies:
                 strategy.next(idx, timestamp)
 
