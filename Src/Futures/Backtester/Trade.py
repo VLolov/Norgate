@@ -1,13 +1,17 @@
+import typing
+
 import pandas as pd
+from tabulate import tabulate
 
 import Futures.BacktesterBase as Bb
+from Futures.Backtester.Future import Future
 
 
 class Trade(Bb.TradeBase):
     def check_state(self) -> bool:
         return True
 
-    def __init__(self, strategy, instrument, entry_date, entry_price, position, stop_loss, margin, momentum, sector, symbol):
+    def __init__(self, strategy, instrument, entry_date, entry_price, position, stop_loss, margin, momentum):
 
         super().__init__(
             strategy=strategy,
@@ -28,8 +32,9 @@ class Trade(Bb.TradeBase):
 
         self.margin = margin
         self.momentum = momentum
-        self.sector: str = sector
-        self.symbol = symbol
+        future = typing.cast(Future, instrument)
+        self.sector: str = future.metadata.sector
+        self.symbol = future.symbol
 
         self.exit_date = None
         self.exit_price = 0
@@ -43,9 +48,9 @@ class Trade(Bb.TradeBase):
 
         self.trade_dates = []
 
-    def __str__(self):
+    def __repr__(self):
         return (
-            f"Trade - strategy: {self.strategy}, instrument: {self.instrument}, "
+            f"Trade - strategy: {self.strategy.name}, instrument: {self.instrument.symbol}, "
             f"entry_date: {self.entry_date}, entry_price: {self.entry_price}, "
             f"exit_date: {self.exit_date}, exit_price: {self.exit_price}, "
             f"initial_stop_loss: {self.initial_stop_loss}, stop_loss: {self.stop_loss}, "
@@ -78,3 +83,12 @@ class Trade(Bb.TradeBase):
     def market_position(self):
         return 1 if self.position > 0 else -1
 
+
+def print_trades(trades: typing.List[object]):
+    if len(trades) > 0:
+        df = pd.DataFrame([vars(trade) for trade in trades])
+        columns = ['id', 'instrument', 'entry_date', 'entry_price', 'exit_date', 'exit_price',
+                   'position', 'initial_stop_loss', 'stop_loss', 'is_stop_loss', 'margin', 'momentum', 'sector',
+                   'symbol', 'deleted', 'is_closed', 'costs', 'rolls']
+        df = df[columns]
+        trades[0].log.debug("\n" + tabulate(df, headers='keys', tablefmt='psql'))

@@ -7,14 +7,20 @@ class Group(Bb.GroupBase):
     def run(self):
         dates = self.instruments[0].data.index
         for strategy in self.strategies:
-            strategy.init(0, dates[0])
+            strategy.idx = 0
+            strategy.time = dates[0]
+            strategy.init()
 
         for idx, timestamp in enumerate(tqdm(dates, desc='Processing days', colour='green')):
             for strategy in self.strategies:
-                strategy.next(idx, timestamp)
+                strategy.idx = idx
+                strategy.time = timestamp
+                strategy.next()
 
         for strategy in self.strategies:
-            strategy.last(len(dates) - 1, dates[-1])
+            strategy.idx = len(dates) - 1
+            strategy.time = dates[-1]
+            strategy.last()
 
     def check_state(self) -> bool:
         return (

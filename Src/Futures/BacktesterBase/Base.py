@@ -34,6 +34,13 @@ class Base(ABC):
     def print_instances(cls):
         [log.info(f"{inst}, id: {inst.id}, state: {inst.check_state()}") for inst in cls._instances]
 
+    @classmethod
+    def id_string(cls, obj):
+        if obj is None:
+            return "None"
+        else:
+            return str(obj.id)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

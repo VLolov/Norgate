@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC
 from typing import Optional, TYPE_CHECKING
 
 import pandas as pd
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
     from .StrategyBase import StrategyBase
 
 
-class TradeBase(Base):
+class TradeBase(Base, ABC):
     def __init__(self,
                  strategy: StrategyBase = None,
                  instrument: InstrumentBase = None,
@@ -30,3 +31,12 @@ class TradeBase(Base):
         self.exit_price = exit_price
         self.position = position
 
+    def __repr__(self):
+        return (f"<{self.__class__.__name__} id: {self.id}, "
+                f"Strategy: {self.strategy.name}, "
+                f"Instrument: {self.instrument.symbol}, "
+                f"entry_date: {self.entry_date}, "
+                f"entry_price: {self.entry_price}, "
+                f"exit_date: {self.exit_date}, "
+                f"entry_price: {self.exit_price}, "
+                f"position: {self.position}>")

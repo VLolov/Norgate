@@ -22,6 +22,12 @@ class BacktesterBase(Base, ABC):
         self.groups: List[GroupBase] = []
         self.reports: List[ReportBase] = []
 
+    def __repr__(self):
+        return (f"<{self.__class__.__name__} id: {self.id},"
+                f"portfolio id: {self.id_string(self.portfolio)}, "
+                f"groups count: {len(self.groups)}, "
+                f"reports count: {len(self.reports)}>")
+
     def set_portfolio(self, portfolio: PortfolioBase):
         self.portfolio = portfolio
         self.log.info(f"Set portfolio object")
@@ -51,9 +57,10 @@ class BacktesterBase(Base, ABC):
             symbol = f'"{symbol}"' if symbol else ''
 
             tabs = '\t' * lvl
-            print(f'{tabs} {obj} {name} {symbol} {state}')
+            self.log.debug(f'{tabs} {obj} {name} {symbol} {state}')
 
         level = 0
+        self.log.debug("")
         log(self, level)
         level += 1
         log(f'Portfolio:', level)

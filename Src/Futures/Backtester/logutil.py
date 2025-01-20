@@ -89,8 +89,8 @@ def logger(level=logging.INFO, logfile=None, console=True):
     :param console: boolean, true= don't log on console
     :return: configured logging object
     """
-    # format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    format = "%(asctime)s - %(name)s - %(message)s"
+    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    # format = "%(asctime)s - %(name)s - %(message)s"
     logger = logging.getLogger()
     logger.setLevel(level)
     if console:

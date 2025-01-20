@@ -22,6 +22,14 @@ class GroupBase(Base, ABC):
         self.instruments: List[InstrumentBase] = []
         self.strategies: List[StrategyBase] = []
 
+    def __repr__(self):
+        return (f"<{self.__class__.__name__} id: {self.id}, "
+                f"name: {self.name}, "
+                f"backtester: {self.id_string(self.backtester)}, "
+                f"broker: {self.id_string(self.broker)}, "
+                f"instruments count: {len(self.instruments)}, "
+                f"strategies count: {len(self.strategies)}>")
+
     def set_broker(self, broker: BrokerBase):
         self.broker = broker
         return self
@@ -41,3 +49,5 @@ class GroupBase(Base, ABC):
     @abstractmethod
     def run(self):
         ...
+
+

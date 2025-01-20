@@ -30,5 +30,6 @@ class PortfolioBase(Base, ABC):
         return self
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} initial_capital: {self.initial_capital}>"
+        return (f"<{self.__class__.__name__} id: {self.id}, "
+                f"initial_capital: {self.initial_capital}>")
 

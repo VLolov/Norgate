@@ -38,6 +38,12 @@ class Future(InstrumentBase):
     def dates(self) -> List[datetime]:
         return [datetime.fromtimestamp(ts) for ts in self.data.index]
 
+    def __repr__(self):
+        return (f"<{self.__class__.__name__} id: {self.id}, "
+                f"symbol: {self.symbol}, "
+                f"first_date: {self.first_date}, "
+                f"last_date: {self.last_date}, "
+                f"data_len: {len(self.data)}>")
 
 def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
     tradable_symbols_1000 = ['6A', '6B', '6C', '6E', '6J', '6M', 'BTC', 'CC', 'CL', 'CT', 'DC', 'DX',
@@ -54,7 +60,7 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
 
     nr_futures = itertools.count(0)
     for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
-        # if next(nr_futures) <= 50:
+        # if next(nr_futures) > 3:
         #     continue
         front = 1
         # print("Symbol", future.symbol, "Front", front)
@@ -88,15 +94,15 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
 
     full_date_range = pd.date_range(start=min_date, end=max_date, freq="D")
     trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
-    for future_new in tqdm(futures_new, desc='Prepare new data', colour='green'):
+    for future in tqdm(futures_new, desc='Prepare futures data', colour='green'):
         # print("new:", future_new.symbol)
-        fd = future_new.data
-        fd = fd.reindex(full_date_range)
-        fd = fd[fd.index.isin(trading_days)]
-        fd.ffill(inplace=True)
-        fd.bfill(inplace=True)
-        future_new.data = fd
-        pass
+        future_data = future.data
+        future_data = future_data.reindex(full_date_range)
+        future_data = future_data[future_data.index.isin(trading_days)]
+        future_data.ffill(inplace=True)
+        future_data.bfill(inplace=True)
+        # IMPORTANT: replace future data of original Future, but leave first/last date unchanged !!!
+        future.data = future_data
 
     return futures_new
 

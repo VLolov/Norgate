@@ -479,5 +479,5 @@ if __name__ == "__main__":
         # show_available_expirations()
         #     symbols = ['RB']    # , 'ZS' 'ES', '6E', 'CL', 'GC', 'NG']
 
-        plot_continuous(['GF'], max_front=99)
+        plot_continuous(['CC'], max_front=99)
 

@@ -22,3 +22,7 @@ class InstrumentBase(Base, ABC):
     def set_group(self, group: GroupBase):
         self.group = group
 
+    def __repr__(self):
+        return (f"<{self.__class__.__name__} id: {self.id}, "
+                f"symbol: {self.symbol}, "
+                f"data_len: {len(self.data)}>")
