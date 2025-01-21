@@ -167,7 +167,7 @@ class LoosePants(StrategyNew):
 
     def _breakout_strategy(self):
         df = self.data
-        assert df is not None, "Backtester not initialized"
+        assert df is not None, "BacktesterFutures not initialized"
 
         df['Atr'] = Indicator.atr(df, self.atr_period)
         # df['Atr'] = Indicator.std(df, self.atr_period)
@@ -192,7 +192,7 @@ class LoosePants(StrategyNew):
         # Mark if trade is missed because of insufficient cash
         df['MissedTrade'] = False
 
-        # Backtester writes here the trailing stop values, so they can be plotted later
+        # BacktesterFutures writes here the trailing stop values, so they can be plotted later
         df['trailing_stop'] = np.nan
 
         broker = self.broker
@@ -296,7 +296,7 @@ class LoosePants(StrategyNew):
 
     def next_counter_trend(self):
         """
-        from A.Clenow - Trading Evolved, Counter Trend Backtester, pp 315
+        from A.Clenow - Trading Evolved, Counter Trend BacktesterFutures, pp 315
         Long positions are allowed if the 40 day exponential moving
         average is above the 80 day exponential moving average. If the price in a
         bull market falls back three times its standard deviation from the highest

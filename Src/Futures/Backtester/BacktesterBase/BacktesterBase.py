@@ -27,6 +27,9 @@ class BacktesterBase(Base, ABC):
                 f"portfolio id: {self.id_string(self.portfolio)}, "
                 f"groups count: {len(self.groups)}, "
                 f"reports count: {len(self.reports)}>")
+    @abstractmethod
+    def run(self):
+        ...
 
     def set_portfolio(self, portfolio: PortfolioBase):
         self.portfolio = portfolio
@@ -70,6 +73,9 @@ class BacktesterBase(Base, ABC):
         level += 1
         for report in self.reports:
             log(report, level)
+
+            for plot in report.plots:
+                log(plot, level + 1)
 
         log(f'Groups ({len(self.groups)}):', level - 1)
         for group in self.groups:

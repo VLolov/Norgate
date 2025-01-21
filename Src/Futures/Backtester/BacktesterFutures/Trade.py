@@ -3,8 +3,8 @@ import typing
 import pandas as pd
 from tabulate import tabulate
 
-import Futures.BacktesterBase as Bb
-from Futures.Backtester.Future import Future
+import Futures.Backtester.BacktesterBase as Bb
+from Futures.Backtester.BacktesterFutures.Future import Future
 
 
 class Trade(Bb.TradeBase):

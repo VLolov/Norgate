@@ -8,18 +8,23 @@ import pandas as pd
 from tqdm import tqdm
 
 from Futures.DBConfig import DBConfig
-from Futures.BacktesterBase import InstrumentBase
+from Futures.Backtester.BacktesterBase import InstrumentBase
 from Futures.TrendFollowing.DataAccess import DataAccess
 from Futures.TrendFollowing.Future import Future as NorgateFuture
 from Futures.TrendFollowing.LoosePants import LoosePants
 
 
 class Future(InstrumentBase):
+    OPEN = -1
+    HIGH = -1
+    LOW = -1
+    CLOSE = -1
+
     def check_state(self) -> bool:
         return True
 
     @dataclass
-    class MetaDataNew:
+    class MetaData:
         symbol: str = ''
         name: str = ''
         sector: str = ''
@@ -29,11 +34,17 @@ class Future(InstrumentBase):
         margin: float = 0
         tick_size: float = 0
 
-    def __init__(self, symbol, metadata: MetaDataNew, data: pd.DataFrame):
+    def __init__(self, symbol, metadata: MetaData, data: pd.DataFrame):
         super().__init__(symbol, data)
-        self.metadata: Future.MetaDataNew = metadata
+        self.metadata: Future.MetaData = metadata
         self.first_date = data.index[0]
         self.last_date = data.index[-1]
+        self.data_numpy = None
+        cols = self.data.columns.values.tolist()
+        self.OPEN = cols.index('Open')
+        self.HIGH = cols.index('High')
+        self.LOW = cols.index('Low')
+        self.CLOSE = cols.index('Close')
 
     def dates(self) -> List[datetime]:
         return [datetime.fromtimestamp(ts) for ts in self.data.index]
@@ -45,6 +56,7 @@ class Future(InstrumentBase):
                 f"last_date: {self.last_date}, "
                 f"data_len: {len(self.data)}>")
 
+
 def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
     tradable_symbols_1000 = ['6A', '6B', '6C', '6E', '6J', '6M', 'BTC', 'CC', 'CL', 'CT', 'DC', 'DX',
                              'EMD', 'ES', 'ETH', 'FCE', 'FDAX', 'FESX', 'FGBL', 'FGBM', 'FGBS', 'FOAT', 'FTDX',
@@ -53,44 +65,49 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
                              'SCN', 'SI', 'SR3', 'TN', 'UB', 'VX', 'YM', 'ZC', 'ZF', 'ZL', 'ZN', 'ZO', 'ZQ', 'ZR', 'ZS',
                              'ZT', 'ZW']
 
-    futures = NorgateFuture.all_futures_norgate(use_micro=True)
+    futures = NorgateFuture.all_futures_norgate(use_micro=False)
     futures_new = []
     min_date = pd.Timestamp.max
     max_date = pd.Timestamp.min
 
     nr_futures = itertools.count(0)
-    for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
-        # if next(nr_futures) > 3:
-        #     continue
-        front = 1
-        # print("Symbol", future.symbol, "Front", front)
 
-        with duckdb.connect(DBConfig.DUCK_DB, read_only=True) as connection:
+    with duckdb.connect(DBConfig.DUCK_DB, read_only=True) as connection:
+        for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
+            # if next(nr_futures) > 3:
+            #     continue
+            front = 1
+            # print("Symbol", future.symbol, "Front", front)
+
+            # database operation
             data_access = DataAccess(connection, start_date, end_date)
             data = LoosePants.get_data(data_access, future, front=front)
             # remove duckdb connection, as it cannot be pickled
             future.dta = None
+            if future.symbol != 'ES':
+                continue
+            if future.symbol not in tradable_symbols_1000:
+                continue
 
-        if future.symbol not in tradable_symbols_1000:
-            continue
+            if 'Micro' in future.name:
+                continue
 
-        if 'Micro' in future.name:
-            continue
+            if future.sector in ['Meat', 'Volatility']:
+                # skipped sectors
+                continue
 
-        if future.sector in ['Meat', 'Volatility']:
-            # skipped sectors
-            continue
+            meta = Future.MetaData()
+            attributes = ['symbol', 'name', 'sector', 'currency', 'exchange', 'big_point', 'margin', 'tick_size']
+            for attr in attributes:
+                value = getattr(future, attr)
+                setattr(meta, attr, value)
 
-        meta = Future.MetaDataNew()
-        attributes = ['symbol', 'name', 'sector', 'currency', 'exchange', 'big_point', 'margin', 'tick_size']
-        for attr in attributes:
-            value = getattr(future, attr)
-            setattr(meta, attr, value)
+            future_new = Future(future.symbol, meta, data)
+            futures_new.append(future_new)
+            min_date = min(min_date, data.index[0])
+            max_date = max(max_date, data.index[-1])
 
-        future_new = Future(future.symbol, meta, data)
-        futures_new.append(future_new)
-        min_date = min(min_date, data.index[0])
-        max_date = max(max_date, data.index[-1])
+            next(nr_futures)
 
     full_date_range = pd.date_range(start=min_date, end=max_date, freq="D")
     trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
@@ -103,6 +120,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
         future_data.bfill(inplace=True)
         # IMPORTANT: replace future data of original Future, but leave first/last date unchanged !!!
         future.data = future_data
+        # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
+        future.data_numpy = future.data.to_numpy()
 
     return futures_new
 

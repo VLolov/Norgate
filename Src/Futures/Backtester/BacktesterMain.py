@@ -1,15 +1,10 @@
 import logging
 
+from Futures.Backtester.BacktesterFutures import *
 from Futures.Backtester.StrategyLoosePants import StrategyLoosePants
 from Futures.Backtester.logutil import logger
 
-from Futures.Backtester.Future import Future, get_futures
-from Futures.Backtester.Report import Report
-from Futures.Backtester.Strategy import Strategy
-from Futures.Backtester.Broker import Broker
-from Futures.Backtester.Backtester import Backtester
-from Futures.Backtester.Group import Group
-from Futures.Backtester.Portfolio import Portfolio
+
 from Futures.TrendFollowing.Timer import Timer
 
 
@@ -34,12 +29,15 @@ def main():
     report = Report("My Report").set_backtester(bt)
     bt.add_report(report)
 
+    plot = Plot("Matplot").set_report(report)
+    report.add_plot(plot)
+
     strategy = StrategyLoosePants()
 
     gr.add_strategy(strategy)
     strategy.set_group(gr)
 
-    futures = get_futures(start_date='1020-01-01', end_date='2024-03-20')
+    futures = get_futures(start_date='1020-01-01', end_date='3024-03-20')
     for future in futures:
         gr.add_instrument(future)
 
@@ -49,19 +47,19 @@ def main():
     bt.print_hierarchy()
     assert bt.check_all_states(), "Some states are False. Can't run"
 
-    bt.run()
+    with Timer(printer=log.info, text="bt.run()"):
+        bt.run()
 
 
 if __name__ == "__main__":
     log = logging.getLogger(__name__)
     logger(level=logging.DEBUG)  # , logfile="c:/tmp/mylog.txt")
 
-    # send all exception to logger:
+    # send all exceptions to logger:
     def except_hook(*args):
         log.error('Uncaught exception:', exc_info=args)
 
     import sys
     sys.excepthook = except_hook
 
-    with Timer(printer=log.info):
-        main()
+    main()

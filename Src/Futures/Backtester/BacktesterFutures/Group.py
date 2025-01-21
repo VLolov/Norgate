@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-import Futures.BacktesterBase as Bb
+import Futures.Backtester.BacktesterBase as Bb
 
 
 class Group(Bb.GroupBase):
@@ -21,6 +21,7 @@ class Group(Bb.GroupBase):
             strategy.idx = len(dates) - 1
             strategy.time = dates[-1]
             strategy.last()
+            strategy.ready = True
 
     def check_state(self) -> bool:
         return (

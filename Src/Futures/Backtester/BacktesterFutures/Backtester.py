@@ -1,8 +1,4 @@
-from abc import ABC, abstractmethod
-from typing import Optional, List, cast
-
-import Futures.BacktesterBase as Bb
-from Futures.Backtester.Group import Group
+import Futures.Backtester.BacktesterBase as Bb
 
 
 class Backtester(Bb.BacktesterBase):
@@ -12,6 +8,11 @@ class Backtester(Bb.BacktesterBase):
     def run(self):
         for group in self.groups:
             group.run()
+
+        for report in self.reports:
+            report.run()
+            for plot in report.plots:
+                plot.run()
 
 
 if __name__ == "__main__":

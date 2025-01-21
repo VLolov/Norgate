@@ -122,7 +122,7 @@ sell_signals = df[df['signal'] == -1]
 plt.scatter(buy_signals.index, buy_signals['close'], marker='^', color='green', label='Buy signal', alpha=1)
 plt.scatter(sell_signals.index, sell_signals['close'], marker='v', color='red', label='Sell signal', alpha=1)
 
-plt.title('Trailing Stop Moving Average Crossover Backtester')
+plt.title('Trailing Stop Moving Average Crossover BacktesterFutures')
 plt.xlabel('Date')
 plt.ylabel('Price')
 plt.legend()

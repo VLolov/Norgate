@@ -1,12 +1,6 @@
 import typing
 
-import pandas as pd
-from tabulate import tabulate
-
-from Futures.Backtester.Broker import Broker
-from Futures.Backtester.Future import Future
-from Futures.Backtester.Strategy import Strategy
-from Futures.Backtester.Trade import Trade, print_trades
+from Futures.Backtester.BacktesterFutures import *
 
 
 class StrategyLoosePants(Strategy):
@@ -23,8 +17,8 @@ class StrategyLoosePants(Strategy):
                  use_one_contract=False,
                  dollar_risk=10_000,        # if dollar_risk < 0: trade with 1 contract
                  account=1_000_000,
-                 cost_contract=0.0,  # USD to trade one contract, single side
-                 slippage_ticks=0.0,  # single side slippage, use TickSize to convert to USD
+                 cost_contract=1.0,  # USD to trade one contract, single side
+                 slippage_ticks=2,  # single side slippage, use TickSize to convert to USD
                  cumulative=False,      # if cumulative=True, position size is calculated based on pct_risk and account size
                                         # if cumulative=False, position size is calculated from dollar_risk
                  pct_risk=0.01,
@@ -53,76 +47,40 @@ class StrategyLoosePants(Strategy):
 
         self.momentum_lookback = self.period
 
-        self.warm_up_period = max(2, self.period, self.atr_period, self.momentum_lookback)
+        # NOTE: warm_up_period is defined in Strategy !
+        self.warm_up_period = 252+9   # @@@ max(2, self.period, self.atr_period, self.momentum_lookback)
 
         self.next_func = self.next  # next, next_counter_trend, next_buy_and_hold, next_random, next_buy_one_contract
         self.random_wait = -1
         # random.seed(42)
-
-        self.nr_trades = 0
-        self.avg_trade = 0.0
-        self.avg_dit = 0.0
-        self.nr_rolls = 0
-        self.avg_contracts = 0
-        self.avg_position_size_dollar = 0.0
-        self.avg_margin = 0.0
-
-        self.winning_trades = 0
-        self.loosing_trades = 0
-        self.avg_contracts = 0.0
-        self.max_dd = 0.0
-        self.total_costs = 0.0  # calculated trading costs for trade entry/exit and slippage
-        self.final_pnl = 0.0
-        self.nr_missed_trades = 0
-        self.yearly_ret = 0.0
-        self.sharpe = 0.0
+        #
+        # self.nr_trades = 0
+        # self.avg_trade = 0.0
+        # self.avg_dit = 0.0
+        # self.nr_rolls = 0
+        # self.avg_contracts = 0
+        # self.avg_position_size_dollar = 0.0
+        # self.avg_margin = 0.0
+        #
+        # self.winning_trades = 0
+        # self.loosing_trades = 0
+        # self.avg_contracts = 0.0
+        # self.max_dd = 0.0
+        # self.total_costs = 0.0  # calculated trading costs for trade entry/exit and slippage
+        # self.final_pnl = 0.0
+        # self.nr_missed_trades = 0
+        # self.yearly_ret = 0.0
+        # self.sharpe = 0.0
 
         self.stop_loss = 0.0
         self.broker: typing.Optional[Broker] = None
 
-        self.warm_up_period = 0
-        self.close_last_trading_day = False
+        self.close_last_trading_day = True
 
-    def close_all_trades(self):
-        for instrument in self.instruments:
-            future = typing.cast(Future, instrument)
-            if self.broker.market_position(self, future) != 0:
-                self.broker.close_position(self, future)
-
-    def set_trade_flags(self):
-        dates = self.instruments[0].data.index.tolist()
+    def calc_indicators(self):
         for instrument in self.instruments:
             future = typing.cast(Future, instrument)
             future.data['trailing_stop'] = 0.0
-            future.data['can_trade'] = False
-            future.data['force_close_trade'] = False
-
-            try:
-                idx_first_date = dates.index(future.first_date)
-            except ValueError:
-                idx_first_date = 0
-
-            try:
-                idx_last_date = dates.index(future.last_date)
-            except ValueError:
-                idx_last_date = len(dates) - 1
-
-            idx_first_date += self.warm_up_period
-            idx_first_date = min(idx_first_date, idx_last_date)
-
-            future.data.loc[dates[idx_first_date]:dates[idx_last_date], 'can_trade'] = True
-            if idx_last_date < len(dates) - 1:
-                # don't set the flag on the last bar (this is not a 'real' signal)
-                future.data.loc[dates[idx_last_date], 'force_close_trade'] = True
-
-    def check_may_trade(self, future, idx):
-        if self.get_value(future, 'force_close_trade', idx):
-            if self.broker.market_position(self, future):
-                self.broker.close_position(self, future)
-            return False
-
-        if self.get_value(future, 'can_trade', idx):
-            return True
 
     def init(self):
         self.log.debug(f"init({self.idx}, {self.time})")
@@ -131,7 +89,14 @@ class StrategyLoosePants(Strategy):
         self.broker.setup(initial_capital=self.account, use_stop_loss=self.use_stop_loss,
                           use_stop_orders=self.use_stop_orders)
 
-        self.set_trade_flags()
+        self.set_tradable()
+
+    def get_close(self, instrument, idx):
+        # return instrument.data.iloc[idx]['Open']
+        return instrument.data['Close'].iloc[idx]        # this is much faster (3-4 times)
+
+    def get_close_numpy(self, instrument, idx):
+        return instrument.data_numpy[idx, Future.CLOSE]
 
     def next(self):
         # all this code is for testing only
@@ -143,26 +108,43 @@ class StrategyLoosePants(Strategy):
 
         for instrument in self.instruments:
             future = typing.cast(Future, instrument)
-            if not self.check_may_trade(future, idx):
+            if not self.check_tradable(future, idx):
                 # self.log.debug(f"{idx} {time} {future}")
                 continue
 
             if broker.update(self, future):
                 self.set_value(future, 'trailing_stop', self.stop_loss, idx)
 
-            for i in range(1):
-                symbol = future.symbol
-                open = self.open(future, idx)
-                high = self.high(future, idx)
-                low = self.low(future, idx)
-                close = self.close(future, idx)
+            # for i in range(10):
+            #     symbol = future.symbol
+            #     open = self.open(future, idx)
+            #     high = self.high(future, idx)
+            #     low = self.low(future, idx)
+            #     close = self.close(future, idx)
 
-            if idx % 100 == 0:
-                if broker.market_position(self, future):
-                    broker.close_position(self, future)
-            elif idx % 150 == 0:
-                if not broker.market_position(self, future):
-                    broker.open_position(self, future)
+            # for i in range(10):
+            #     symbol = future.symbol
+            #     # open1, high1, low1, close1 = self.ohlc(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # assert self.get_close(future, idx) == self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+
+            if broker.market_position(self, future) == 0:
+                broker.open_position(self, future, margin=future.metadata.margin)
+
+            # if idx % 50 == 0:
+            #     if broker.market_position(self, future) == 0:
+            #         broker.open_position(self, future)
+            #
+            # if idx % 49 == 0:
+            #     if broker.market_position(self, future) != 0:
+            #         broker.close_position(self, future)
 
     def last(self):
         self.log.debug(f"last({self.idx}, {self.time})")
@@ -170,4 +152,4 @@ class StrategyLoosePants(Strategy):
         if self.close_last_trading_day:
             self.close_all_trades()
         self.log.debug(f"Number of trades: {len(self.broker.trades)}")
-        print_trades(self.broker.trades)
+        # print_trades(self.broker.trades)

@@ -268,7 +268,7 @@ def run_strategy(norgate_df, ipo_df):
     bench = norgate_df['Close'].pct_change().fillna(0).cumsum()
     plt.plot(bench.index, bench.values, label='Benchmark')
 
-    plt.plot(trades_df.index, trades_df['daily return'].cumsum(), label='Backtester')
+    plt.plot(trades_df.index, trades_df['daily return'].cumsum(), label='BacktesterFutures')
     plt.legend()
     plt.title("Performance")
     plt.grid(True)

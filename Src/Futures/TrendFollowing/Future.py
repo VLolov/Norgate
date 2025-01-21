@@ -96,7 +96,7 @@ class Future:
         return futures
 
     @classmethod
-    def get_future_norgate(cls, symbol, use_micro = False):
+    def get_future_norgate(cls, symbol, use_micro=False):
         futures = [future for future in cls.all_futures_norgate(use_micro) if future.symbol == symbol]
         assert futures and len(futures), \
             f"Cannot find future symbol: {symbol}, provider: Norgate, use_micro: {use_micro}"

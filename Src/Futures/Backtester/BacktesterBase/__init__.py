@@ -7,4 +7,4 @@ from .PortfolioBase import PortfolioBase
 from .ReportBase import ReportBase
 from .StrategyBase import StrategyBase
 from .TradeBase import TradeBase
-
+from .PlotBase import PlotBase

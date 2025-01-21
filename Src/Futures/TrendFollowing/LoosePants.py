@@ -165,7 +165,7 @@ class LoosePants(Strategy):
 
     def _breakout_strategy(self):
         df = self.data
-        assert df is not None, "Backtester not initialized"
+        assert df is not None, "BacktesterFutures not initialized"
 
         df['Atr'] = Indicator.atr(df, self.atr_period)
         # df['Atr'] = Indicator.std(df, self.atr_period)
@@ -190,7 +190,7 @@ class LoosePants(Strategy):
         # Mark if trade is missed because of insufficient cash
         df['MissedTrade'] = False
 
-        # Backtester writes here the trailing stop values, so they can be plotted later
+        # BacktesterFutures writes here the trailing stop values, so they can be plotted later
         df['trailing_stop'] = np.nan
 
         broker = self.broker
@@ -294,7 +294,7 @@ class LoosePants(Strategy):
 
     def next_counter_trend(self):
         """
-        from A.Clenow - Trading Evolved, Counter Trend Backtester, pp 315
+        from A.Clenow - Trading Evolved, Counter Trend BacktesterFutures, pp 315
         Long positions are allowed if the 40 day exponential moving
         average is above the 80 day exponential moving average. If the price in a
         bull market falls back three times its standard deviation from the highest
@@ -529,7 +529,7 @@ class LoosePants(Strategy):
                 continue
 
             df.loc[trade.entry_date, 'Signal'] = 1 if trade.position > 0 else -1
-            df.loc[trade.exit_date, 'CloseStrategy'] = trade.exit_price
+            df.loc[trade.exit_date, 'CloseStrategy'] = trade.exit_price     # correct close price if we got stop loss
             df.loc[trade.exit_date, 'StopLoss'] = trade.exit_price if trade.is_stop_loss else np.nan
 
             # trade.trade_dates[1] - we take the day after the entry (entry on close)
@@ -541,7 +541,7 @@ class LoosePants(Strategy):
                 pass
         # self.data_access.close()  # remove: test only
 
-        self._calc_trades()
+        self._calc_trades()     # needs 'CloseStrategy'
 
         # percent returns
         # df['Returns'] = df['Close'] / df['Close'].shift(1) - 1
@@ -782,8 +782,8 @@ class LoosePants(Strategy):
 
 def _main():
 
-    front = 2
-    symbol = 'NG'
+    front = 1
+    symbol = 'ES'
     long = True
     short = True
 
@@ -820,7 +820,7 @@ def _main():
                         )
 
         # next, next_counter_trend, next_buy_and_hold, next_buy_and_hold_monthly, next_random, next_buy_one_contract
-        # lp.set_next(lp.next_counter_trend)
+        lp.set_next(lp.next_buy_and_hold)
         lp.run(future=future, data=data)
 
     lp.calc_performance()

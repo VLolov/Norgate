@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 
 import pandas as pd
 
-from Futures.BacktesterBase.Base import Base
+from Futures.Backtester.BacktesterBase.Base import Base
 
 if TYPE_CHECKING:
     from .InstrumentBase import InstrumentBase

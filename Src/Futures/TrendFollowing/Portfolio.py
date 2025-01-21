@@ -272,16 +272,18 @@ def calc_strategies(cfg, verbose=True) -> List[LoosePants]:
 
         futures_data.append([future, data, strategy])
 
+
+
     results = []
     if cfg.MULTI_PROCESSING:
         # print(f'Number CPUs: {multiprocessing.cpu_count()}')
         nr_cpu = multiprocessing.cpu_count()//2
         with multiprocessing.Pool(processes=nr_cpu) as pool:
             for result in tqdm(pool.imap(processing_task, futures_data),
-                               desc=f'Run Backtester on {nr_cpu} CPUs', colour='green'):
+                               desc=f'Run BacktesterFutures on {nr_cpu} CPUs', colour='green'):
                 results.append(result)
     else:
-        for fd in tqdm(futures_data, desc='Run Backtester SingleCPU', colour='green'):
+        for fd in tqdm(futures_data, desc='Run BacktesterFutures SingleCPU', colour='green'):
             results.append(processing_task(fd))
 
     assert len(results) > 0, 'No trades'
@@ -680,7 +682,7 @@ def portfolio_with_constraints(cfg, strategy_results, constraints=True, verbose=
     #     f"Should be almost equal - total_return: {total_return} and stat: {stat.total_return}"
 
     if verbose:
-        strategy = r"Buy\ and\ Hold\ " if cfg.BUY_AND_HOLD else r"Backtester\ "
+        strategy = r"Buy\ and\ Hold\ " if cfg.BUY_AND_HOLD else r"BacktesterFutures\ "
 
         title = (
             r'$\bf{' + strategy + (r'with\ constraints' if constraints else r'no\ constraints')
@@ -753,7 +755,7 @@ def plot_performance(cumulative_df, config: Config):
     #                compounding=True,
     #                scale='log')
 
-    pp.yearly_plot('Yearly', 'Backtester', returns_pct,
+    pp.yearly_plot('Yearly', 'BacktesterFutures', returns_pct,
                    show_difference=False, print_performance=True)
 
     # plt.show(block=False)

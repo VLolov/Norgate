@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
 
 import pandas as pd
 
-from Futures.BacktesterBase.Base import Base
+from Futures.Backtester.BacktesterBase.Base import Base
 
 if TYPE_CHECKING:
     from .GroupBase import GroupBase
@@ -21,11 +21,15 @@ class StrategyBase(Base, ABC):
         self.group: Optional[GroupBase] = None
         self.idx: int = 0
         self.time: Optional[pd.Timestamp] = None
+        self.ready = False
+        self.cost_contract: float = 0.0
+        self.slippage_ticks: int = 0
+
 
     def __repr__(self):
         return (f"<{self.__class__.__name__} id: {self.id}, "
                 f"name: {self.name}, "
-                f"group: {self.id_string(self.group)} >")
+                f"group: {self.id_string(self.group)}>")
 
     def set_group(self, group: GroupBase):
         self.group = group

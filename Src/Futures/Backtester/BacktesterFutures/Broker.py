@@ -3,8 +3,8 @@ from typing import List, Dict
 
 import numpy as np
 
-import Futures.BacktesterBase as Bb
-from Futures.Backtester.Trade import Trade
+import Futures.Backtester.BacktesterBase as Bb
+from .Trade import Trade
 
 
 class Broker(Bb.BrokerBase):
@@ -134,6 +134,10 @@ class Broker(Bb.BrokerBase):
     def update(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase, check_stop_loss=True) -> bool:
         # return true is stop loss executed
         current_trade = self.get_current_trade(strategy, instrument)
+
+        # update close_price, so we have current pnl of trade, although it is not closed yet
+        if current_trade is not None:
+            current_trade.exit_price = strategy.close(instrument, strategy.idx)
 
         # write date in list of current trade
         date = strategy.time

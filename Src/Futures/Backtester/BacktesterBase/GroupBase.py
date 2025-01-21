@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
 
-from Futures.BacktesterBase.Base import Base
+from Futures.Backtester.BacktesterBase.Base import Base
 
 if TYPE_CHECKING:
     from .BacktesterBase import BacktesterBase

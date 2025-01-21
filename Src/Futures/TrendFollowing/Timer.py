@@ -5,16 +5,17 @@ import winsound
 
 class Timer:
     # context manager
-    def __init__(self, beep: bool = True, printer: Callable = print):
+    def __init__(self, beep: bool = True, printer: Callable = print, text=''):
         self.start = None
         self.beep = beep
         self.printer = printer
+        self.text = text
 
     def __enter__(self):
         self.start = perf_counter()
 
     def __exit__(self, *args):
-        msg = f'Executed in {(perf_counter() - self.start):.1f} seconds'
+        msg = f'{self.text} Executed in {(perf_counter() - self.start):.1f} seconds'
         self.printer(msg)
         if self.beep:
             winsound.PlaySound('SystemDefault', winsound.SND_ALIAS)
