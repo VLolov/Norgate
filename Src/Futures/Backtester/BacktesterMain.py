@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 
 from Futures.Backtester.BacktesterFutures import *
 from Futures.Backtester.StrategyLoosePants import StrategyLoosePants
@@ -63,3 +64,26 @@ if __name__ == "__main__":
     sys.excepthook = except_hook
 
     main()
+
+
+@dataclass
+class Config1:
+    i: int = 1
+
+
+@dataclass
+class Config2(Config1):
+    k: int = 3
+
+
+@dataclass
+class Config3(Config2):
+    i: int = 3  # error - c3.int remains = 1 ?!?
+    l: int = 4
+
+
+c1 = Config1()
+c2 = Config2()
+c3 = Config3()
+
+pass

@@ -115,7 +115,7 @@ class Report(ReportBase):
                 # this trade is too short (probably just opened on the last bar)
                 trade.deleted = True
                 continue
-            self.log.error(trade)
+            self.log.debug(trade)
             new_exit_date, new_exit_price = self.get_trade_exit(trade, df)
 
             df.loc[trade.entry_date, 'Signal'] = 1 if trade.position > 0 else -1
@@ -228,7 +228,8 @@ class Report(ReportBase):
 
         report.nr_missed_trades = len(df[df['MissedTrade']])
 
-    def get_trade_exit(self, trade, df):
+    @staticmethod
+    def get_trade_exit(trade, df):
         if trade.exit_date is None:
             # the trade is still open, simulate closing of trade
             # take last date in date as 'closing' date

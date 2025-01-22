@@ -717,7 +717,7 @@ class LoosePants(Strategy):
         ax[2].get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
         # ax[2].legend(loc='upper left')
 
-        plt.show()
+        # plt.show()
 
         #
         # 4th chart

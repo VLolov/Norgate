@@ -10,6 +10,8 @@ from Futures.Backtester.BacktesterBase import PlotBase
 from Futures.Backtester.BacktesterFutures import Report
 from Futures.Backtester.BacktesterFutures import Trade
 
+matplotlib.use("Qt5Agg")
+
 
 class Plot(PlotBase):
     def __init__(self, name: str):
@@ -19,10 +21,10 @@ class Plot(PlotBase):
         return self.name != '' and self.report is not None
 
     def run(self):
-        self.plot_performance()
+        # self.plot_performance()
+        pass
 
     def plot_performance(self, front=1):
-        matplotlib.use("Qt5Agg")
         sns.set_style("whitegrid")
         logging.getLogger('matplotlib.font_manager').disabled = True
 
@@ -37,7 +39,7 @@ class Plot(PlotBase):
         # big_point = self.big_point
 
         future_name = (
-            f'{instrument}\n'
+            f'{instrument.symbol}\n'
             # f'Atr.mul: {strategy.atr_multiplier}, Risk : ${strategy.dollar_risk:,.0f}, Stop orders: {strategy.use_stop_orders}, '
             # f'Cumulative: {strategy.cumulative}, Pct_risk: {strategy.pct_risk}, Front: {front}\n'
             f'Nr.trades: {report.nr_trades}, Missed: {report.nr_missed_trades}, Rolls: {report.nr_rolls},'
@@ -50,7 +52,6 @@ class Plot(PlotBase):
         )
 
         fig, ax = plt.subplots(4, figsize=(12, 11), sharex='all')
-
         plt.suptitle(future_name)
 
         #
@@ -105,37 +106,35 @@ class Plot(PlotBase):
         #
         #   2nd chart
         #
-        # df[['Buy&Hold_Pnl', 'Strat_Pnl']].plot(ax=ax[1], lw=1.5)
-        # df[['Strat_Pnl_Long', 'Strat_Pnl_Short']].plot(ax=ax[1], lw=0.5, alpha=0.7)
-        #
-        # # ax[1].set_title(f'Performance USD')
-        # ax[1].set_xlabel('Date')
-        # ax[1].set_ylabel(f'PnL, {instrument.metadata.currency}')
-        # ax[1].get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
-        # ax[1].legend(loc='upper left')
+        df[['Buy&Hold_Pnl', 'Strat_Pnl']].plot(ax=ax[1], lw=1.5)
+        df[['Strat_Pnl_Long', 'Strat_Pnl_Short']].plot(ax=ax[1], lw=0.5, alpha=0.7)
+
+        # ax[1].set_title(f'Performance USD')
+        ax[1].set_xlabel('Date')
+        ax[1].set_ylabel(f'PnL, {instrument.metadata.currency}')
+        ax[1].get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        ax[1].legend(loc='upper left')
 
         #
         # 3rd chart
         #
-        # df['Margin'].plot(ax=ax[2], lw=1)
-        #
-        # # ax[2].set_title(f'Margin')
-        # ax[2].set_xlabel('Date')
-        # ax[2].set_ylabel(f'Margin, {instrument.metadata.currency}')
-        # ax[2].get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
-        # # ax[2].legend(loc='upper left')
-        #
-        # plt.show()
+        df['Margin'].plot(ax=ax[2], lw=1)
+
+        # ax[2].set_title(f'Margin')
+        ax[2].set_xlabel('Date')
+        ax[2].set_ylabel(f'Margin, {instrument.metadata.currency}')
+        ax[2].get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        ax[2].legend(loc='upper left')
 
         #
         # 4th chart
         #
-        # df['Contracts'].plot(ax=ax[3], lw=1)
-        #
-        # # ax[3].set_title(f'Nr. Contracts')
-        # ax[3].set_xlabel('Date')
-        # ax[3].set_ylabel('Nr. Contracts')
-        # # ax[3].legend(loc='upper left')
+        df['Contracts'].plot(ax=ax[3], lw=1)
+
+        # ax[3].set_title(f'Nr. Contracts')
+        ax[3].set_xlabel('Date')
+        ax[3].set_ylabel('Nr. Contracts')
+        # ax[3].legend(loc='upper left')
 
         plt.show()
 

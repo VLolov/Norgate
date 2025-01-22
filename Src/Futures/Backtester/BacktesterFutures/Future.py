@@ -109,13 +109,13 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
 
             next(nr_futures)
 
-    full_date_range = pd.date_range(start=min_date, end=max_date, freq="D")
+    full_date_range = pd.date_range(start=min_date, end=max_date, freq="D")     # "B" = business day
     trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
     for future in tqdm(futures_new, desc='Prepare futures data', colour='green'):
         # print("new:", future_new.symbol)
         future_data = future.data
         future_data = future_data.reindex(full_date_range)
-        future_data = future_data[future_data.index.isin(trading_days)]
+        # @@@ future_data = future_data[future_data.index.isin(trading_days)]
         future_data.ffill(inplace=True)
         future_data.bfill(inplace=True)
         # IMPORTANT: replace future data of original Future, but leave first/last date unchanged !!!
