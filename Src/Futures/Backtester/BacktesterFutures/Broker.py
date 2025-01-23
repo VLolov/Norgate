@@ -60,19 +60,18 @@ class Broker(Bb.BrokerBase):
             return 0
         return current_trade.market_position
 
-    def _update_rolls(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase):
-        current_trade = self.get_current_trade(strategy, instrument)
-        if (current_trade is not None
-                and current_trade.position != 0
-                and strategy.is_roll(instrument, strategy.idx)):
+    def _update_rolls(self, current_trade: Trade):
+        strategy = current_trade.strategy
+        instrument = current_trade.instrument
+        if current_trade.position != 0 and strategy.is_roll(instrument, strategy.idx):
             current_trade.rolls += 1
 
-    def _check_stop_loss(self, current_trade: Trade, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase):
-        if current_trade is None or not self.use_stop_loss:
-            return np.nan
+    def _check_stop_loss(self, current_trade: Trade):
+        strategy = current_trade.strategy
+        instrument = current_trade.instrument
+        idx = strategy.idx
 
         stop_level = np.nan
-        idx = strategy.idx
         if current_trade.position > 0:
             # long exit?
             if self.use_stop_orders:
@@ -97,6 +96,15 @@ class Broker(Bb.BrokerBase):
         if current_trade:
             current_trade.stop_loss = stop_loss
 
+    def get_stop_loss(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase) -> float:
+        # if no current_trade, return 0
+        stop_loss = 0.0
+        current_trade = self.get_current_trade(strategy, instrument)
+        if current_trade:
+            stop_loss = current_trade.stop_loss
+        return stop_loss
+
+
     def open_position(self,
                       strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase,
                       position: float = 1,
@@ -107,15 +115,15 @@ class Broker(Bb.BrokerBase):
         assert self.get_current_trade(strategy, instrument) is None, "previous position is still open"
         # assert position == 0.0, "cannot open order with position: 0"
 
-        entry_date = strategy.time
+        entry_date = strategy.dt
         entry_price = price if price is not np.nan else strategy.close(instrument, strategy.idx)
 
         if stop_loss is not np.nan:
-            info = f"strategy: {strategy}, instrument: {instrument}, date: {entry_date}"
+            error_message = f"strategy: {strategy}, instrument: {instrument}, date: {entry_date}"
             if position > 0:
-                assert stop_loss < entry_price, f"wrong stop loss price, long order, {info}"
+                assert stop_loss < entry_price, f"wrong stop loss price, long order, {error_message}"
             else:
-                assert stop_loss > entry_price, f"wrong stop loss price, short order, {info}"
+                assert stop_loss > entry_price, f"wrong stop loss price, short order, {error_message}"
 
         trade = Trade(strategy=strategy,
                       instrument=instrument,
@@ -123,8 +131,8 @@ class Broker(Bb.BrokerBase):
                       entry_price=entry_price,
                       position=position, stop_loss=stop_loss,
                       margin=margin,
-                      momentum=momentum
-                      )
+                      momentum=momentum)
+
         self.set_current_trade(strategy, instrument, trade)
         trade.margin = margin * abs(position)
 
@@ -133,29 +141,27 @@ class Broker(Bb.BrokerBase):
 
     def update(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase, check_stop_loss=True) -> bool:
         # return true is stop loss executed
+        stop_loss_occurred = False
+
         current_trade = self.get_current_trade(strategy, instrument)
 
         # update close_price, so we have current pnl of trade, although it is not closed yet
         if current_trade is not None:
             current_trade.exit_price = strategy.close(instrument, strategy.idx)
 
-        # write date in list of current trade
-        date = strategy.time
+            # write date in list of current trade
+            date = strategy.dt
+            if date not in current_trade.trade_dates:
+                current_trade.trade_dates.append(date)
 
-        if (current_trade is not None
-                and date not in current_trade.trade_dates):
-            current_trade.trade_dates.append(date)
+            if check_stop_loss and self.use_stop_loss:
+                stop_level = self._check_stop_loss(current_trade)
+                if stop_level is not np.nan:
+                    self.close_position(strategy, instrument, price=stop_level, is_stop_loss=True)
+                    stop_loss_occurred = True
 
-        stop_loss_occurred = False
-        if check_stop_loss:
-            stop_level = self._check_stop_loss(current_trade, strategy, instrument)
-            # @@@ stop loss
-            if stop_level is not np.nan:
-                self.close_position(strategy, instrument, price=stop_level, is_stop_loss=True)
-                stop_loss_occurred = True
-
-        if not stop_loss_occurred:
-            self._update_rolls(strategy, instrument)
+            if not stop_loss_occurred:
+                self._update_rolls(current_trade)
 
         return stop_loss_occurred
 
@@ -164,8 +170,8 @@ class Broker(Bb.BrokerBase):
         current_trade = self.get_current_trade(strategy, instrument)
         assert current_trade is not None, \
             (f"No open position to be closed, "
-             f"strategy: {strategy}, instrument: {instrument}, date: {strategy.time}")
-        exit_date = strategy.time
+             f"strategy: {strategy}, instrument: {instrument}, date: {strategy.dt}")
+        exit_date = strategy.dt
         exit_price = price if price is not np.nan else strategy.close(instrument, strategy.idx)
         current_trade.close_trade(exit_date, exit_price, is_stop_loss)
 

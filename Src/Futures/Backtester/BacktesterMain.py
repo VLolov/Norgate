@@ -34,12 +34,14 @@ def main():
     report.add_plot(plot)
 
     strategy = StrategyLoosePants()
+    strategy.config = StrategyLoosePants.Config()
 
     gr.add_strategy(strategy)
     strategy.set_group(gr)
 
     futures = get_futures(start_date='1020-01-01', end_date='3024-03-20')
     for future in futures:
+        # if future.symbol in ['CL', 'ES']:   # @@@
         gr.add_instrument(future)
 
     # Base.print_instances()

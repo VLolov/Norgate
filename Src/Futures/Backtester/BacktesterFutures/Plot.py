@@ -1,5 +1,6 @@
 import logging
 import typing
+from datetime import datetime
 
 import seaborn as sns
 import matplotlib
@@ -21,15 +22,18 @@ class Plot(PlotBase):
         return self.name != '' and self.report is not None
 
     def run(self):
-        # self.plot_performance()
+        reporting = typing.cast(Report, self.report)
+        report = reporting.get_first_report()   # @@@
+        self.plot_performance(report)
+
+        # for report in reporting.get_all_reports():
+        #     self.plot_performance(report)
         pass
 
-    def plot_performance(self, front=1):
+    def plot_performance(self, report, front=1):
         sns.set_style("whitegrid")
         logging.getLogger('matplotlib.font_manager').disabled = True
 
-        reporting = typing.cast(Report, self.report)
-        report = reporting.get_first_report()
         strategy = report.strategy
         instrument = report.instrument
         broker = strategy.group.broker
@@ -39,9 +43,9 @@ class Plot(PlotBase):
         # big_point = self.big_point
 
         future_name = (
-            f'{instrument.symbol}\n'
-            # f'Atr.mul: {strategy.atr_multiplier}, Risk : ${strategy.dollar_risk:,.0f}, Stop orders: {strategy.use_stop_orders}, '
-            # f'Cumulative: {strategy.cumulative}, Pct_risk: {strategy.pct_risk}, Front: {front}\n'
+            f'{instrument}\n'
+            f'Atr.mul: {strategy.config.atr_multiplier}, Risk : ${strategy.config.dollar_risk:,.0f}, Stop orders: {strategy.config.use_stop_orders}, '
+            f'Cumulative: {strategy.config.cumulative}, Pct_risk: {strategy.config.pct_risk}, Front: {front}\n'
             f'Nr.trades: {report.nr_trades}, Missed: {report.nr_missed_trades}, Rolls: {report.nr_rolls},'
             f' Avg.trade: ${report.avg_trade:,.0f}, Avg.contracts: {report.avg_contracts:,.2f}, Avg.DIT: {report.avg_dit:.0f},'
             f' Avg.pos.size: ${report.avg_position_size_dollar:,.0f},'
@@ -53,6 +57,7 @@ class Plot(PlotBase):
 
         fig, ax = plt.subplots(4, figsize=(12, 11), sharex='all')
         plt.suptitle(future_name)
+        # ax[0].set_xlim(datetime(1980,1,1),datetime(2025,8,30)) does not work
 
         #
         #   Upper chart

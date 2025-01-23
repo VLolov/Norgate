@@ -1,4 +1,5 @@
 import typing
+from abc import ABC
 from typing import List
 import pandas as pd
 
@@ -7,19 +8,20 @@ from Futures.Backtester.BacktesterFutures import Broker
 from Futures.Backtester.BacktesterFutures import Future
 
 
-class Strategy(Bb.StrategyBase):
+class Strategy(Bb.StrategyBase, ABC):
     def __init__(self, name: str):
         super().__init__(name)
-        self.warm_up_period = 0
+        self.warm_up_period = -1
+        self.close_last_trading_day = True
 
-    def init(self):
-        self.log.debug(f"init({self.idx}, {self.time})")
-
-    def next(self):
-        self.log.debug(f"next({self.idx}, {self.time})")
-
-    def last(self):
-        self.log.debug(f"last({self.idx}, {self.time})")
+    # def init(self):
+    #     self.log.debug(f"init({self.idx}, {self.time})")
+    #
+    # def next(self):
+    #     self.log.debug(f"next({self.idx}, {self.time})")
+    #
+    # def last(self):
+    #     self.log.debug(f"last({self.idx}, {self.time})")
 
     def check_state(self) -> bool:
         return self.group is not None
@@ -64,7 +66,7 @@ class Strategy(Bb.StrategyBase):
             if broker.market_position(self, future) != 0:
                 broker.close_position(self, future)
 
-    def set_tradable(self):
+    def set_tradable_range_instruments(self):
         dates = self.instruments[0].data.index.tolist()
         for instrument in self.instruments:
             future = typing.cast(Future, instrument)
@@ -81,6 +83,7 @@ class Strategy(Bb.StrategyBase):
             except ValueError:
                 idx_last_date = len(dates) - 1
 
+            assert self.warm_up_period >= 0, "warm_up_period not set"
             idx_first_date += self.warm_up_period
             idx_first_date = min(idx_first_date, idx_last_date)
 
@@ -89,7 +92,7 @@ class Strategy(Bb.StrategyBase):
                 # don't set the flag on the last bar (this is not a 'real' signal)
                 future.data.loc[dates[idx_last_date], 'force_close_trade'] = True
 
-    def check_tradable(self, future, idx):
+    def check_tradable_range(self, future, idx):
         if self.get_value(future, 'force_close_trade', idx):
             broker = typing.cast(Broker, self.group.broker)
             if broker.market_position(self, future):

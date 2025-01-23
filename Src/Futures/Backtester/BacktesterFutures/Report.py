@@ -1,6 +1,6 @@
 import logging
 import typing
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from dataclasses import dataclass
 
 import numpy as np
@@ -78,6 +78,9 @@ class Report(ReportBase):
 
     def get_first_report(self) -> 'Report.SingleStrategyInstrumentReport':
         return self._first_report
+
+    def get_all_reports(self) -> List['Report.SingleStrategyInstrumentReport']:
+        return self._single_reports.values()
 
     def get_strategies(self):
         strategies = []

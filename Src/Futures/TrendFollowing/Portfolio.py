@@ -86,7 +86,7 @@ class Config:
     USE_STOP_LOSS = True
     CUMULATIVE = True
     PATCH_MICRO = True
-    MULTI_PROCESSING = False
+    MULTI_PROCESSING = True
     SECTOR = ''
     BUY_AND_HOLD = False
     COST_CONTRACT = 2

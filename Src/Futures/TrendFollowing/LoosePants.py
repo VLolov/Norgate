@@ -783,7 +783,7 @@ class LoosePants(Strategy):
 def _main():
 
     front = 1
-    symbol = 'ES'
+    symbol = 'CL'
     long = True
     short = True
 
@@ -811,16 +811,16 @@ def _main():
                         use_one_contract=True,
                         long=long,
                         short=short,
-                        dollar_risk=50_000,
-                        account=1000_000,
-                        cost_contract=1,  # USD to trade one contract, single side
-                        slippage_ticks=2,  # single side slippage, use TickSize to convert to USD
+                        dollar_risk=10_000,
+                        account=1_000_000,
+                        cost_contract=1.0,  # USD to trade one contract, single side
+                        slippage_ticks=2.0,  # single side slippage, use TickSize to convert to USD
                         cumulative=True,
                         pct_risk=0.02,  # pct_risk is used if cumulative=True
                         )
 
         # next, next_counter_trend, next_buy_and_hold, next_buy_and_hold_monthly, next_random, next_buy_one_contract
-        lp.set_next(lp.next_buy_and_hold)
+        lp.set_next(lp.next)
         lp.run(future=future, data=data)
 
     lp.calc_performance()

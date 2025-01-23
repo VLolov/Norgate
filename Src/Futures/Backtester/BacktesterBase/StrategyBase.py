@@ -20,7 +20,7 @@ class StrategyBase(Base, ABC):
         self. name = name
         self.group: Optional[GroupBase] = None
         self.idx: int = 0
-        self.time: Optional[pd.Timestamp] = None
+        self.dt: Optional[pd.Timestamp] = None
         self.ready = False
         self.cost_contract: float = 0.0
         self.slippage_ticks: int = 0

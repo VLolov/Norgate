@@ -1,7 +1,8 @@
 import itertools
 import logging
 from abc import ABC, abstractmethod
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,6 @@ class Base(ABC):
     @abstractmethod
     def check_state(self) -> bool:
         """ Each class has to check its state and return it here """
-
         ...
 
     @property
