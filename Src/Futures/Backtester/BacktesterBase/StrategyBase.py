@@ -25,7 +25,6 @@ class StrategyBase(Base, ABC):
         self.cost_contract: float = 0.0
         self.slippage_ticks: int = 0
 
-
     def __repr__(self):
         return (f"<{self.__class__.__name__} id: {self.id}, "
                 f"name: {self.name}, "

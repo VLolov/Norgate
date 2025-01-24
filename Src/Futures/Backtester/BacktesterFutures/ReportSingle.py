@@ -11,18 +11,20 @@ from Futures.Backtester.BacktesterBase import ReportBase
 from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker
 
 
-class Report(ReportBase):
+class ReportSingle(ReportBase):
     def __init__(self, name: str):
         super().__init__(name)
 
-        self._single_reports: Dict[int, Report.SingleStrategyInstrumentReport] = {}
-        self._first_report: Optional[Report.SingleStrategyInstrumentReport] = None
+        self._single_reports: Dict[int, ReportSingle.StrategyInstrumentReport] = {}
+        self._first_report: Optional[ReportSingle.StrategyInstrumentReport] = None
+
+        self.ready = False
 
     def check_state(self) -> bool:
         return self.name != '' and self.backtester is not None
 
     def run(self):
-        self.log.info(f'Creating report: "{self.name}"')
+        self.log.info(f'Creating single report: "{self.name}"')
         strategies = self.get_strategies()
         for strategy in strategies:
             for instrument in strategy.group.instruments:
@@ -35,13 +37,16 @@ class Report(ReportBase):
             df = pd.DataFrame([vars(report) for report in self._single_reports.values()])
             self.log.debug("\n" + tabulate(df, headers='keys', tablefmt='psql'))
 
+        self.ready = True
+
         # for key, report in self.single_reports.items():
         #     self.log.debug(report)
 
     @dataclass
-    class SingleStrategyInstrumentReport:
+    class StrategyInstrumentReport:
         strategy: Strategy
         instrument: Future
+        trades: List[Trade]
 
         nr_trades = 0
         avg_trade = 0.0
@@ -65,29 +70,22 @@ class Report(ReportBase):
             return strategy.id * 10000 + instrument.id
 
     def add_single_report(self, strategy, instrument):
-        report = self.SingleStrategyInstrumentReport(strategy=strategy, instrument=instrument)
-        key = self.SingleStrategyInstrumentReport.get_key(strategy, instrument)
+        report = self.StrategyInstrumentReport(strategy=strategy, instrument=instrument, trades=[])
+        key = self.StrategyInstrumentReport.get_key(strategy, instrument)
         self._single_reports[key] = report
         if len(self._single_reports) == 1:
             self._first_report = report
         return report
 
     def get_single_report(self, strategy, instrument):
-        key = self.SingleStrategyInstrumentReport.get_key(strategy, instrument)
+        key = self.StrategyInstrumentReport.get_key(strategy, instrument)
         return self._single_reports.get(key, None)
 
-    def get_first_report(self) -> 'Report.SingleStrategyInstrumentReport':
+    def get_first_report(self) -> 'ReportSingle.StrategyInstrumentReport':
         return self._first_report
 
-    def get_all_reports(self) -> List['Report.SingleStrategyInstrumentReport']:
-        return self._single_reports.values()
-
-    def get_strategies(self):
-        strategies = []
-        for group in self.backtester.groups:
-            for strategy in group.strategies:
-                strategies.append(strategy)
-        return strategies
+    def get_all_reports(self) -> List['ReportSingle.StrategyInstrumentReport']:
+        return list(self._single_reports.values())
 
     def calc_performance(self, strategy: Strategy, instrument: Future):
         assert strategy.ready, f"Run strategy {strategy.name} first"
@@ -118,7 +116,7 @@ class Report(ReportBase):
                 # this trade is too short (probably just opened on the last bar)
                 trade.deleted = True
                 continue
-            self.log.debug(trade)
+            # self.log.debug(trade)
             new_exit_date, new_exit_price = self.get_trade_exit(trade, df)
 
             df.loc[trade.entry_date, 'Signal'] = 1 if trade.position > 0 else -1
@@ -183,6 +181,8 @@ class Report(ReportBase):
         rolls = 0
         self.total_costs = 0.0
         trades = [typing.cast(Trade, t) for t in broker.trades if t.instrument == instrument]
+
+        report.trades = trades
 
         if strategy.cost_contract > 0 or strategy.slippage_ticks > 0:
             for trade in trades:

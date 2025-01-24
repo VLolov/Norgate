@@ -27,22 +27,27 @@ def main():
     broker.set_group(gr)
     gr.set_broker(broker)
 
-    report = Report("My Report").set_backtester(bt)
-    bt.add_report(report)
+    report_single = ReportSingle("My Single Report").set_backtester(bt)
+    bt.add_report(report_single)
+    plot_single = PlotSingle("My Single Plot").set_report(report_single)
+    report_single.add_plot(plot_single)
 
-    plot = Plot("Matplot").set_report(report)
-    report.add_plot(plot)
+    report_multi = ReportMulti("My Multi report_multi").set_backtester(bt)
+    report_multi.set_report_single(report_single)
+    bt.add_report(report_multi)
+    plot_multi = PlotMulti("My Multi Plot").set_report(report_multi)
+    report_multi.add_plot(plot_multi)
 
     strategy = StrategyLoosePants()
     strategy.config = StrategyLoosePants.Config()
 
-    gr.add_strategy(strategy)
+    gr.add_strategies(strategy)
     strategy.set_group(gr)
 
-    futures = get_futures(start_date='1020-01-01', end_date='3024-03-20')
-    for future in futures:
-        # if future.symbol in ['CL', 'ES']:   # @@@
-        gr.add_instrument(future)
+    selected_symbols = ['CL', 'ES', 'GC']
+    # selected_symbols = []
+    futures = get_futures(start_date='1020-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
+    gr.add_instruments(futures)
 
     # Base.print_instances()
     # p.print_instances()

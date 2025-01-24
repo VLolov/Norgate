@@ -34,12 +34,18 @@ class GroupBase(Base, ABC):
         self.broker = broker
         return self
 
-    def add_instrument(self, instrument: InstrumentBase):
-        self.instruments.append(instrument)
+    def add_instruments(self, instrument: InstrumentBase | List[InstrumentBase]):
+        if isinstance(instrument, list):
+            self.instruments.extend(instrument)
+        else:
+            self.instruments.append(instrument)
         return self
 
-    def add_strategy(self, strategy: StrategyBase):
-        self.strategies.append(strategy)
+    def add_strategies(self, strategy: StrategyBase | List[StrategyBase]):
+        if isinstance(strategy, list):
+            self.strategies.extend(strategy)
+        else:
+            self.strategies.append(strategy)
         return self
 
     def add_backtester(self, backtester: BacktesterBase):

@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from Futures.Backtester.BacktesterBase import PlotBase
-from Futures.Backtester.BacktesterFutures import Report
+from Futures.Backtester.BacktesterFutures import ReportSingle
 from Futures.Backtester.BacktesterFutures import Trade
 
 matplotlib.use("Qt5Agg")
 
 
-class Plot(PlotBase):
+class PlotSingle(PlotBase):
     def __init__(self, name: str):
         super().__init__(name)
 
@@ -22,7 +22,7 @@ class Plot(PlotBase):
         return self.name != '' and self.report is not None
 
     def run(self):
-        reporting = typing.cast(Report, self.report)
+        reporting = typing.cast(ReportSingle, self.report)
         report = reporting.get_first_report()   # @@@
         self.plot_performance(report)
 

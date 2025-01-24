@@ -156,11 +156,11 @@ if __name__ == "__main__":
     strategy_x = StrategyX("")
     strategy_y = StrategyY("StrategyNameY")
 
-    gr.add_strategy(strategy_x).add_strategy(strategy_y)
+    gr.add_strategies(strategy_x).add_strategies(strategy_y)
     instrument_x = InstrumentX("symbol_x", pd.DataFrame())
     instrument_y = InstrumentX("symbol_y", pd.DataFrame())
 
-    gr.add_instrument(instrument_x).add_instrument(instrument_y)
+    gr.add_instruments(instrument_x).add_instruments(instrument_y)
 
     ts = pd.Timestamp.min
     trade_x = TradeX(strategy_x, instrument_x, ts, 1000, ts, 2000, 1)

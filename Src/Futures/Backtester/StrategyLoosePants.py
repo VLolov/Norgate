@@ -39,6 +39,7 @@ class StrategyLoosePants(Strategy):
         # self.warm_up_period: int = 0
         # self.broker: typing.Optional[Broker] = None
         self.close_last_trading_day = True
+        self.log.warning("Strategy initialized")
 
     def calc_indicators(self):
         for instrument in self.instruments:
@@ -224,7 +225,7 @@ class StrategyLoosePants(Strategy):
                 else:
                     # not enough money to trade
                     # df.loc[self.timestamp(), 'MissedTrade'] = True # this is the same as set_value()
-                    self.set_value(instrument,'MissedTrade', True, idx)
+                    self.set_value(instrument, 'MissedTrade', True, idx)
 
             # check for stop loss
             if self.config.use_stop_loss and broker.market_position(self, instrument) != 0:
@@ -238,8 +239,6 @@ class StrategyLoosePants(Strategy):
                     broker.set_stop_loss(self, instrument, stop_loss)
 
                 self.set_value(instrument, 'trailing_stop', broker.get_stop_loss(self, instrument), idx)     # for the charting only
-
-
 
     @staticmethod
     def atr(instrument, idx) -> float:

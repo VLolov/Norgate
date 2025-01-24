@@ -31,3 +31,13 @@ class ReportBase(Base, ABC):
 
     def add_plot(self, plot: PlotBase):
         self.plots.append(plot)
+
+    def get_groups(self):
+        return self.backtester.groups
+
+    def get_strategies(self):
+        strategies = []
+        for group in self.get_groups():
+            for strategy in group.strategies:
+                strategies.append(strategy)
+        return strategies

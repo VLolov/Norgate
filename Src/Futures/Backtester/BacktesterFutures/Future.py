@@ -57,7 +57,7 @@ class Future(InstrumentBase):
                 f"data_len: {len(self.data)}>")
 
 
-def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
+def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols:List[str]=[]) -> List[Future]:
     tradable_symbols_1000 = ['6A', '6B', '6C', '6E', '6J', '6M', 'BTC', 'CC', 'CL', 'CT', 'DC', 'DX',
                              'EMD', 'ES', 'ETH', 'FCE', 'FDAX', 'FESX', 'FGBL', 'FGBM', 'FGBS', 'FOAT', 'FTDX',
                              'GC', 'HE', 'HG', 'HTW', 'KE', 'LEU', 'LRC', 'LSU', 'NG', 'NKD', 'NQ', 'RTY', 'SB',
@@ -88,6 +88,11 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
             #     continue
             if future.symbol not in tradable_symbols_1000:
                 continue
+
+            if selected_symbols:
+                if future.symbol not in selected_symbols:
+                    continue
+
 
             if 'Micro' in future.name:
                 continue
@@ -124,13 +129,14 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
     #     future.data_numpy = future.data.to_numpy()
 
     full_date_range = pd.date_range(start=min_date, end=max_date, freq="B")     # "B" = business day
-    full_date_range.freq = None
+
     trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
     for future in tqdm(futures_new, desc='Prepare futures data', colour='green'):
         # print("new:", future_new.symbol)
         future_data = future.data
         future_data = future_data.reindex(full_date_range)
-        future_data.index = future_data.index.date      # remove time part of index !!!!!!!!
+        # NOTE: Remove time part of index! If not done, the chart of single instrument gets messed-up ?!?
+        future_data.index = future_data.index.date
         # future_data = future_data[future_data.index.isin(full_date_range)]
         future_data.ffill(inplace=True)
         future_data.bfill(inplace=True)
@@ -138,7 +144,6 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01') -> List[Future]:
         future.data = future_data
         # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
         future.data_numpy = future.data.to_numpy()
-
 
     return futures_new
 
