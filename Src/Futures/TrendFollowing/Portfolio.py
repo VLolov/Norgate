@@ -84,7 +84,7 @@ class Config:
     START_DATE = '1019-01-01'   # start of data: '1970-01-01' (1980-01-01)
     END_DATE = '3015-04-01'
     USE_STOP_LOSS = True
-    CUMULATIVE = True
+    CUMULATIVE = False
     PATCH_MICRO = True
     MULTI_PROCESSING = True
     SECTOR = ''

@@ -39,7 +39,7 @@ def main():
     report_multi.add_plot(plot_multi)
 
     strategy = StrategyLoosePants()
-    strategy.config = StrategyLoosePants.Config()
+    strategy.set_config(StrategyLoosePants.MyConfig())
 
     gr.add_strategies(strategy)
     strategy.set_group(gr)

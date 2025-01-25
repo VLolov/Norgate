@@ -9,8 +9,17 @@ from Futures.TrendFollowing.Indicator import Indicator
 
 
 class StrategyLoosePants(Strategy):
-    @dataclass
-    class Config:
+    # @dataclass
+    class MyConfig(Config):
+        portfolio_dollar: float = 100_000
+        risk_position: float = 0.02  # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
+        risk_all_positions: float = 0.2  # % of portfolio; 0=don't check
+        max_margin: float = 0.4  # % of portfolio; 0=don't check margin
+        start_date: str = '1019-01-01'  # start of data: '1970-01-01' (1980-01-01)
+        end_date: str = '3015-04-01'
+        sector: str = ''
+        max_positions_per_sector: int = 0
+
         period: int = 12 * 21
         atr_period: int = 14
         atr_multiplier: float = 5.0
@@ -33,7 +42,7 @@ class StrategyLoosePants(Strategy):
     def __init__(self, name='LoosePants', config=None):
         super().__init__(name)
         if config is None:
-            self.config: StrategyLoosePants.Config = StrategyLoosePants.Config()
+            self.set_config(StrategyLoosePants.MyConfig())
 
         self.momentum_lookback: int = 21
         # self.warm_up_period: int = 0
@@ -45,7 +54,7 @@ class StrategyLoosePants(Strategy):
         for instrument in self.instruments:
             future = typing.cast(Future, instrument)
             df = future.data
-            cfg = self.config
+            cfg = self.get_config()
             df['trailing_stop'] = 0.0
             df['Atr'] = Indicator.atr(df, cfg.atr_period)
             # df['Atr'] = Indicator.std(df, self.atr_period)
@@ -85,17 +94,18 @@ class StrategyLoosePants(Strategy):
         self.log.debug(f"init({self.idx}, {self.dt})")
 
         # modify parameters of Strategy class
-        self.cost_contract = self.config.cost_contract
-        self.slippage_ticks = self.config.slippage_ticks
-        self.close_last_trading_day = self.config.close_last_trading_day
+        cfg = self.get_config()
+        self.cost_contract = cfg.cost_contract
+        self.slippage_ticks = cfg.slippage_ticks
+        self.close_last_trading_day = cfg.close_last_trading_day
 
         broker = typing.cast(Broker, self.group.broker)
-        broker.setup(initial_capital=self.config.account,
-                     use_stop_loss=self.config.use_stop_loss,
-                     use_stop_orders=self.config.use_stop_orders)
+        broker.setup(initial_capital=cfg.account,
+                     use_stop_loss=cfg.use_stop_loss,
+                     use_stop_orders=cfg.use_stop_orders)
 
         # self.warm_up_period =max(2, self.period, self.atr_period, self.momentum_lookback)
-        self.warm_up_period = max(2, self.config.period, self.config.atr_period, self.momentum_lookback)
+        self.warm_up_period = max(2, cfg.period, cfg.atr_period, self.momentum_lookback)
 
         self.set_tradable_range_instruments()
         self.calc_indicators()
@@ -111,7 +121,8 @@ class StrategyLoosePants(Strategy):
 
     def calc_nr_contracts(self, instrument: Future, position_dollar, stop_loss_distance):
         contracts = 1.0
-        if self.config.use_one_contract:
+        cfg = self.get_config()
+        if cfg.use_one_contract:
             return contracts
 
         if position_dollar > 0 and stop_loss_distance > 0 and instrument.metadata.big_point > 0:
@@ -177,8 +188,8 @@ class StrategyLoosePants(Strategy):
             #     closed_pnl = sum([trade.pnl * self.big_point - trade.costs for trade in broker.trades if trade.is_closed])
             #     curr_account = self.account + closed_pnl
             #     self.dollar_risk = curr_account * self.pct_risk
-
-            delay = -self.config.order_execution_delay
+            cfg = self.get_config()
+            delay = -cfg.order_execution_delay
 
             if (broker.market_position(self, instrument) <= 0
                     and self.close(instrument, idx - delay) > self.up(instrument, idx - delay - 1)):
@@ -187,10 +198,10 @@ class StrategyLoosePants(Strategy):
                     # close current short position before going long
                     broker.close_position(self, instrument)
 
-                contracts = self.calc_nr_contracts(instrument, self.config.dollar_risk, self.atr(instrument, idx) * self.config.atr_multiplier)
+                contracts = self.calc_nr_contracts(instrument, cfg.dollar_risk, self.atr(instrument, idx) * cfg.atr_multiplier)
                 if contracts > 0:
                     # go long if enough money for at least one contract
-                    if self.config.long and enough_volume:
+                    if cfg.long and enough_volume:
                         stop_loss = self.close_minus_atr(instrument, idx)
                         mom = self._calc_mom(instrument, idx)
                         # open a new long position, contracts > 0
@@ -209,11 +220,11 @@ class StrategyLoosePants(Strategy):
                     broker.close_position(self, instrument)
 
                 contracts = self.calc_nr_contracts(instrument,
-                                                   self.config.dollar_risk,
-                                                   self.atr(instrument, idx) * self.config.atr_multiplier)
+                                                   cfg.dollar_risk,
+                                                   self.atr(instrument, idx) * cfg.atr_multiplier)
                 if contracts > 0:
                     # go short if enough money for at least one contract
-                    if self.config.short and enough_volume:
+                    if cfg.short and enough_volume:
                         stop_loss = self.close_plus_atr(instrument, idx)
                         mom = - self._calc_mom(instrument, idx)
                         # open a new short position, contracts < 0
@@ -228,8 +239,8 @@ class StrategyLoosePants(Strategy):
                     self.set_value(instrument, 'MissedTrade', True, idx)
 
             # check for stop loss
-            if self.config.use_stop_loss and broker.market_position(self, instrument) != 0:
-                if self.config.use_trailing_stop:
+            if cfg.use_stop_loss and broker.market_position(self, instrument) != 0:
+                if cfg.use_trailing_stop:
                     # update trailing stop
                     stop_loss = broker.get_stop_loss(self, instrument)
                     if broker.market_position(self, instrument) > 0:

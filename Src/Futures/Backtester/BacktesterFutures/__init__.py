@@ -8,3 +8,4 @@ from .ReportSingle import ReportSingle
 from .PlotSingle import PlotSingle
 from .ReportMulti import ReportMulti
 from .PlotMulti import PlotMulti
+from .Config import Config

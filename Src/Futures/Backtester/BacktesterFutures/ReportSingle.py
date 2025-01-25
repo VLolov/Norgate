@@ -33,7 +33,7 @@ class ReportSingle(ReportBase):
                 # self.log.debug(f"Calculating performance for strategy: {strategy}, instrument: {instrument}")
                 self.calc_performance(strategy, instrument)
 
-        if self.log.level == logging.DEBUG:
+        if self.log.getEffectiveLevel() == logging.DEBUG:
             df = pd.DataFrame([vars(report) for report in self._single_reports.values()])
             self.log.debug("\n" + tabulate(df, headers='keys', tablefmt='psql'))
 

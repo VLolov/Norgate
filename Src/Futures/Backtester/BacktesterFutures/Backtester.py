@@ -10,7 +10,7 @@ class Backtester(Bb.BacktesterBase):
             group.run()
 
         for report in self.reports:
-            report.run()
+            # report.run()
             for plot in report.plots:
                 plot.run()
 

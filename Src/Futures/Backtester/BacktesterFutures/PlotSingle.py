@@ -23,6 +23,9 @@ class PlotSingle(PlotBase):
 
     def run(self):
         reporting = typing.cast(ReportSingle, self.report)
+        if not reporting.ready:
+            reporting.run()
+
         report = reporting.get_first_report()   # @@@
         self.plot_performance(report)
 
@@ -41,11 +44,12 @@ class PlotSingle(PlotBase):
         df = instrument.data
 
         # big_point = self.big_point
-
+        cfg = strategy.get_config()
+        
         future_name = (
             f'{instrument}\n'
-            f'Atr.mul: {strategy.config.atr_multiplier}, Risk : ${strategy.config.dollar_risk:,.0f}, Stop orders: {strategy.config.use_stop_orders}, '
-            f'Cumulative: {strategy.config.cumulative}, Pct_risk: {strategy.config.pct_risk}, Front: {front}\n'
+            f'Atr.mul: {cfg.atr_multiplier}, Risk : ${cfg.dollar_risk:,.0f}, Stop orders: {cfg.use_stop_orders}, '
+            f'Cumulative: {cfg.cumulative}, Pct_risk: {cfg.pct_risk}, Front: {front}\n'
             f'Nr.trades: {report.nr_trades}, Missed: {report.nr_missed_trades}, Rolls: {report.nr_rolls},'
             f' Avg.trade: ${report.avg_trade:,.0f}, Avg.contracts: {report.avg_contracts:,.2f}, Avg.DIT: {report.avg_dit:.0f},'
             f' Avg.pos.size: ${report.avg_position_size_dollar:,.0f},'
