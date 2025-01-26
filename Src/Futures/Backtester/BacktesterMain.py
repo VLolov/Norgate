@@ -19,13 +19,13 @@ def main():
     bt.set_portfolio(p)
     p.set_initial_capital(100_000).set_backtester(bt)
 
-    gr = Group("My first group")
-    gr.add_backtester(bt)
-    bt.add_group(gr)
+    group = Group("My first group")
+    group.add_backtester(bt)
+    bt.add_group(group)
 
     broker = Broker()
-    broker.set_group(gr)
-    gr.set_broker(broker)
+    broker.set_group(group)
+    group.set_broker(broker)
 
     report_single = ReportSingle("My Single Report").set_backtester(bt)
     bt.add_report(report_single)
@@ -35,24 +35,24 @@ def main():
     report_multi = ReportMulti("My Multi report_multi").set_backtester(bt)
     report_multi.set_report_single(report_single)
     bt.add_report(report_multi)
-    plot_multi = PlotMulti("My Multi Plot").set_report(report_multi)
+    plot_multi = PlotMulti("My Multi Plot", plot_histogram=False, plot_qq=False)
+    plot_multi.set_report(report_multi)
     report_multi.add_plot(plot_multi)
 
     strategy = StrategyLoosePants()
     strategy.set_config(StrategyLoosePants.MyConfig())
 
-    gr.add_strategies(strategy)
-    strategy.set_group(gr)
+    group.add_strategies(strategy)
+    strategy.set_group(group)
 
     selected_symbols = ['CL', 'ES', 'GC']
-    # selected_symbols = []
-    futures = get_futures(start_date='1020-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
-    gr.add_instruments(futures)
+    selected_symbols = []
+    futures = get_futures(start_date='1980-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
+    group.add_instruments(futures)
 
-    # Base.print_instances()
-    # p.print_instances()
+    # bt.print_instances()
+    # bt.print_hierarchy()
 
-    bt.print_hierarchy()
     assert bt.check_all_states(), "Some states are False. Can't run"
 
     with Timer(printer=log.info, text="bt.run()"):

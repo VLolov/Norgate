@@ -168,6 +168,9 @@ class Broker(Bb.BrokerBase):
     def close_position(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase,
                        price: float = np.nan, is_stop_loss: bool = False):
         current_trade = self.get_current_trade(strategy, instrument)
+        if current_trade is None:
+            # no position to be closed
+            return
         assert current_trade is not None, \
             (f"No open position to be closed, "
              f"strategy: {strategy}, instrument: {instrument}, date: {strategy.dt}")

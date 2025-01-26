@@ -28,6 +28,9 @@ class Base(ABC):
 
     @classmethod
     def check_all_states(cls) -> bool:
+        for inst in cls._instances:
+            if not inst.check_state():
+                log.error(f"{inst}, id: {inst.id}, state: {inst.check_state()}")
         return all(inst.check_state() for inst in cls._instances)
 
     @classmethod

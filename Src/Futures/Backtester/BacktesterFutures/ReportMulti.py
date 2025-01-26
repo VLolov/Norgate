@@ -8,39 +8,36 @@ import pandas as pd
 from tabulate import tabulate
 
 from Futures.Backtester.BacktesterBase import ReportBase, InstrumentBase
-from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker, ReportSingle
+from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker, ReportSingle, Config
+
+DATA_DIRS = [
+    'C:/Users/info/Documents/Python/MachineLearning/Src/Tradestation/data',
+    'H:/Invest/backtester_tests/data_download',
+    'C:/Users/info/Documents/Python/MachineLearning/Src/Tradestation/data'
+]
+
+DATA_DIRS = []  # don't save result in files
 
 
 class ReportMulti(ReportBase):
-    # @dataclass
-    # class Configx:
-    #     CUMULATIVE: bool = True,
-    #     PORTFOLIO_DOLLAR: float = 100_000
-    #     RISK_POSITION: float = 1_000,
-    #     RISK_ALL_POSITIONS: float = 0.3
-    #     MAX_POSITIONS_PER_SECTOR: int = 0
-    #     MAX_MARGIN: float = 0
-    #     ATR_MUL: float = 5
-    #     PERIOD: int = 12 * 21
+    @dataclass
+    class ReportMultiResult:
+        cumulative_df: Optional[pd.DataFrame] = None
+        table_df: Optional[pd.DataFrame] = None
+        config: Optional[Config] = None
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, verbose=True):
         super().__init__(name)
-
-        # todo: transfer config from loose pants, but somehow without coupling
-        self.config = None
+        self._verbose = verbose
 
         # input data comes from this report_single
         self._report_single: Optional[ReportSingle] = None
 
         # results:
-        self._report_multi_df: Optional[pd.DataFrame] = None
-        self._report_multi_stat: Optional[ReportMulti.Statistics] = None
-        self._report_multi_table: Optional[pd.DataFrame] = None
+        self._report_multi: Optional[ReportMulti.ReportMultiResult] = None
 
-        # self._report = ReportMulti.PerformanceIndicators()
-
+        self._strategy_config = None
         self.ready = False
-        self.strategy_config = None
 
     def check_state(self) -> bool:
         return self.name != '' and self.backtester is not None and self._report_single is not None
@@ -48,39 +45,29 @@ class ReportMulti(ReportBase):
     def set_report_single(self, report_single):
         self._report_single = report_single
 
-    def get_report_multi_df(self):
-        return self._report_multi_df
-
-    def get_report_multi_statistics(self):
-        return self._report_multi_stat
-
-    def get_report_multi_table(self):
-        return self._report_multi_table
+    def get_report_multi(self):
+        return self._report_multi
 
     def run(self):
         self.log.info(f'Creating multi report: "{self.name}"')
 
-        verbose = False
-
-        if not self._report_single.ready:
-            self._report_single.run()
+        assert self._report_single.ready, "Single report must be run first"
 
         reports = self._report_single.get_all_reports()
         assert reports and len(reports) > 0, "No single reports"
 
-        self.strategy_config = self.get_strategy_config(reports)
+        self._strategy_config = self.extract_strategy_config(reports)
 
-        df, statistics = self.combined_result(reports, verbose=verbose)
-        self._report_multi_df, self._report_multi_stat = [df, statistics]
-        self._report_multi_table = self.calc_table(df, statistics)
-
+        df, statistics = self.combined_result(reports)
+        table = self.calc_table(df, statistics)
+        self._report_multi = ReportMulti.ReportMultiResult(cumulative_df=df,
+                                                           table_df=table,
+                                                           config=self._strategy_config)
+        self.save_pnl(df)
         self.ready = True
-        # if self.log.getEffectiveLevel() == logging.DEBUG:
-        #     self.log.debug("\n" + tabulate(df, headers='keys', tablefmt='psql'))
-        #     self.log.debug(statistics)
 
     @staticmethod
-    def get_strategy_config(reports):
+    def extract_strategy_config(reports):
         strategy_config = reports[0].strategy.get_config()
         required_attributes = ['cumulative', 'account', 'portfolio_dollar', 'risk_position',
                                'risk_all_positions', 'max_positions_per_sector', 'max_margin',
@@ -88,7 +75,7 @@ class ReportMulti(ReportBase):
         strategy_config.check_attributes(required_attributes)
         return strategy_config
 
-    def combined_result(self, reports: List[ReportSingle.StrategyInstrumentReport], verbose=True) \
+    def combined_result(self, reports: List[ReportSingle.StrategyInstrumentReport]) \
             -> typing.Tuple[pd.DataFrame, 'ReportMulti.Statistics']:
         
         account_size = self.backtester.portfolio.initial_capital
@@ -194,23 +181,22 @@ class ReportMulti(ReportBase):
     
         # all strategies processed
     
-        if verbose:
+        if self._verbose:
             trades_summary_df = pd.DataFrame(trades_rows)
             if len(trades_summary_df) > 0:
                 total = trades_summary_df['pnl'].sum()
                 avg = trades_summary_df['pnl'].mean()
                 costs = trades_summary_df['costs'].sum()
-                self.log.debug(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
+                self.log.info(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
                 trades_summary_df.reset_index(drop=True, inplace=True)
                 trades_summary_df.sort_values(by='entry_date', inplace=True)
-                self.log.debug("Single trades with calculated contracts:")
-                self.log.debug("\n" + tabulate(trades_summary_df.sort_values(by='exit_date'), headers='keys', tablefmt='psql'))
+                self.log.info("Single trades with calculated contracts:")
+                self.log.info("\n" + tabulate(trades_summary_df.sort_values(by='exit_date'), headers='keys', tablefmt='psql'))
     
             summary_df = pd.DataFrame(summary_rows)
     
             self.log.debug('Combined result with calculated contracts:')
             self.log.debug(tabulate(summary_df.sort_values(by='symbol'), headers='keys', tablefmt='psql'))
-    
             self.log.debug(f'*** Pnl of all trades: {summary_df["pnl"].sum():,.0f}, {stat.total_return:,.0f}')
     
             stat.avg_dit = sum_dit / stat.number_trades if stat.number_trades > 0 else 0.0
@@ -218,7 +204,7 @@ class ReportMulti(ReportBase):
             # print(f'*** Filter av.contracts > 1')
             # filtered_df = summary_df[summary_df['av.contracts'] > 1]
             self.log.debug(f'Tradable {len(tradable)} symbols:')
-            self.log.debug('[', ', '.join(f'{sym}' for sym in tradable), ']')
+            self.log.debug('[' + ', '.join(f'{sym}' for sym in tradable) + ']')
             # print(tabulate(filtered_df, headers='keys', tablefmt='psql'))
             # print(tabulate(filtered_df, headers='keys', tablefmt='psql'))
     
@@ -236,7 +222,7 @@ class ReportMulti(ReportBase):
         return cumulative_df, stat
 
     def calc_table(self, cumulative_df, stat):
-        cfg = self.strategy_config
+        cfg = self._strategy_config
         if cfg.cumulative:
             # don't accumulate again !!!
             # for col in ['Total', 'Total_Long', 'Total_Short']:
@@ -269,7 +255,7 @@ class ReportMulti(ReportBase):
         # assert np.isclose(total_return, stat.total_return, atol=10), \
         #     f"Should be almost equal - total_return: {total_return} and stat: {stat.total_return}"
 
-        cfg = self.strategy_config
+        cfg = self._strategy_config
 
         data = {
             'position risk%': f'{cfg.risk_position * 100:.2f} %',
@@ -313,6 +299,29 @@ class ReportMulti(ReportBase):
             strategy_dates.update(instrument.data.index)
         strategy_dates = sorted(list(strategy_dates))
         return strategy_dates
+
+    @staticmethod
+    def _save_pnl(filename, df):
+        df = df['Total']
+        df = df.reset_index()
+        df.columns = ['timestamp', 'close']
+        df['mp'] = 1
+        # data_frame.to_csv(filename, index=False, header=True, float_format='%.4f')
+        df.to_csv(filename, index=False, header=True, float_format='%g')
+        print(f'Data saved to "{filename}"')
+
+    def save_pnl(self, df):
+        if self._strategy_config.cumulative:
+            self.log.info('Cannot save results from CUMULATIVE backtest')
+            return
+        if not DATA_DIRS:
+            self.log.info('Saving of results is disabled')
+            return
+
+        for data_dir in DATA_DIRS:
+            # filename = f'{data_dir}/my_cta_trend_{cfg.PERIOD}.csv'
+            filename = f'{data_dir}/my_cta_trend.csv'
+            self._save_pnl(filename, df)
 
     @dataclass
     class Statistics:

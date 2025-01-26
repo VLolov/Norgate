@@ -9,8 +9,11 @@ class Backtester(Bb.BacktesterBase):
         for group in self.groups:
             group.run()
 
+        # run reports first, so that data is available in plots
         for report in self.reports:
-            # report.run()
+            report.run()
+
+        for report in self.reports:
             for plot in report.plots:
                 plot.run()
 

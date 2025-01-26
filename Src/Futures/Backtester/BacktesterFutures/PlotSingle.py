@@ -23,8 +23,7 @@ class PlotSingle(PlotBase):
 
     def run(self):
         reporting = typing.cast(ReportSingle, self.report)
-        if not reporting.ready:
-            reporting.run()
+        assert reporting.ready, "ReportSingle not run"
 
         report = reporting.get_first_report()   # @@@
         self.plot_performance(report)
@@ -33,7 +32,8 @@ class PlotSingle(PlotBase):
         #     self.plot_performance(report)
         pass
 
-    def plot_performance(self, report, front=1):
+    @staticmethod
+    def plot_performance(report, front=1):
         sns.set_style("whitegrid")
         logging.getLogger('matplotlib.font_manager').disabled = True
 

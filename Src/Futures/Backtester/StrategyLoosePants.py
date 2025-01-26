@@ -9,7 +9,7 @@ from Futures.TrendFollowing.Indicator import Indicator
 
 
 class StrategyLoosePants(Strategy):
-    # @dataclass
+    @dataclass
     class MyConfig(Config):
         portfolio_dollar: float = 100_000
         risk_position: float = 0.02  # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
@@ -33,7 +33,7 @@ class StrategyLoosePants(Strategy):
         account: float = 1_000_000
         cost_contract: float = 1.0  # USD to trade one contract, single side
         slippage_ticks: float = 2  # single side slippage, use TickSize to convert to USD
-        cumulative: bool = False  # if cumulative=True, position size is calculated based on pct_risk and account size
+        cumulative: bool = True  # if cumulative=True, position size is calculated based on pct_risk and account size
         # if cumulative=False, position size is calculated from dollar_risk
         pct_risk: float = 0.02
         order_execution_delay: int = 0
@@ -194,11 +194,12 @@ class StrategyLoosePants(Strategy):
             if (broker.market_position(self, instrument) <= 0
                     and self.close(instrument, idx - delay) > self.up(instrument, idx - delay - 1)):
                 # go long
-                if broker.market_position(self, instrument) < 0:
+                if True or broker.market_position(self, instrument) < 0:
                     # close current short position before going long
                     broker.close_position(self, instrument)
 
-                contracts = self.calc_nr_contracts(instrument, cfg.dollar_risk, self.atr(instrument, idx) * cfg.atr_multiplier)
+                contracts = self.calc_nr_contracts(instrument, cfg.dollar_risk,
+                                                   self.atr(instrument, idx) * cfg.atr_multiplier)
                 if contracts > 0:
                     # go long if enough money for at least one contract
                     if cfg.long and enough_volume:
@@ -215,7 +216,7 @@ class StrategyLoosePants(Strategy):
 
             if broker.market_position(self, instrument) >= 0 and self.close(instrument, idx - delay) < self.down(instrument, idx - delay - 1):
                 # go short
-                if broker.market_position(self, instrument) > 0:
+                if True or broker.market_position(self, instrument) > 0:
                     # close current long position before going short
                     broker.close_position(self, instrument)
 
