@@ -32,7 +32,7 @@ def main():
     plot_single = PlotSingle("My Single Plot").set_report(report_single)
     report_single.add_plot(plot_single)
 
-    report_multi = ReportMulti("My Multi report_multi").set_backtester(bt)
+    report_multi = ReportMulti("My Multi report_multi", verbose=True).set_backtester(bt)
     report_multi.set_report_single(report_single)
     bt.add_report(report_multi)
     plot_multi = PlotMulti("My Multi Plot", plot_histogram=False, plot_qq=False)

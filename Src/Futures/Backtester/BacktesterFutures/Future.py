@@ -93,7 +93,6 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
                 if future.symbol not in selected_symbols:
                     continue
 
-
             if 'Micro' in future.name:
                 continue
 
@@ -130,7 +129,7 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
 
     full_date_range = pd.date_range(start=min_date, end=max_date, freq="B")     # "B" = business day
 
-    trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
+    # trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
     for future in tqdm(futures_new, desc='Prepare futures data', colour='green'):
         # print("new:", future_new.symbol)
         future_data = future.data
@@ -144,6 +143,9 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
         future.data = future_data
         # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
         future.data_numpy = future.data.to_numpy()
+        pass
+        future.data.index = pd.to_datetime(future.data.index)      # restore datetime index
+        pass
 
     return futures_new
 

@@ -1,7 +1,5 @@
 import datetime
 import typing
-from copy import deepcopy
-from typing import Optional, Dict, List
 from dataclasses import dataclass
 
 import numpy as np
@@ -10,14 +8,10 @@ from Futures.Backtester.BacktesterFutures import *
 from Futures.TrendFollowing.Indicator import Indicator
 
 
-skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
-skip_short = []
-
-
-class StrategyLoosePants(Strategy):
+class StrategyLoosePantsCopy(Strategy):
     @dataclass
     class MyConfig(Config):
-        portfolio_dollar: float = 0
+        portfolio_dollar: float = 100_000
         risk_position: float = 0.02  # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
         risk_all_positions: float = 0.2  # % of portfolio; 0=don't check
         max_margin: float = 0.4  # % of portfolio; 0=don't check margin
@@ -34,11 +28,12 @@ class StrategyLoosePants(Strategy):
         use_stop_orders: bool = True
         short: bool = True
         long: bool = True
-        use_one_contract: bool = False
+        use_one_contract: bool = True
         dollar_risk: float = 10_000  # if dollar_risk < 0: trade with 1 contract
+        account: float = 1_000_000
         cost_contract: float = 1.0  # USD to trade one contract, single side
         slippage_ticks: float = 2  # single side slippage, use TickSize to convert to USD
-        cumulative: bool = False  # if cumulative=True, position size is calculated based on pct_risk and account size
+        cumulative: bool = True  # if cumulative=True, position size is calculated based on pct_risk and account size
         # if cumulative=False, position size is calculated from dollar_risk
         pct_risk: float = 0.02
         order_execution_delay: int = 0
@@ -47,13 +42,12 @@ class StrategyLoosePants(Strategy):
     def __init__(self, name='LoosePants', config=None):
         super().__init__(name)
         if config is None:
-            self.set_config(StrategyLoosePants.MyConfig())
+            self.set_config(StrategyLoosePantsCopy.MyConfig())
 
         self.momentum_lookback: int = 21
         # self.warm_up_period: int = 0
         # self.broker: typing.Optional[Broker] = None
         self.close_last_trading_day = True
-        self.curr_account = 0.0
         self.log.warning("Strategy initialized")
 
     def calc_indicators(self):
@@ -100,17 +94,13 @@ class StrategyLoosePants(Strategy):
         self.log.debug(f"init({self.idx}, {self.dt})")
 
         # modify parameters of Strategy class
-        cfg = typing.cast(self, self.get_config())
+        cfg = self.get_config()
         self.cost_contract = cfg.cost_contract
         self.slippage_ticks = cfg.slippage_ticks
         self.close_last_trading_day = cfg.close_last_trading_day
 
-        # get initial_capital from portfolio
-        cfg.portfolio_dollar = self.group.backtester.portfolio.initial_capital
-        self.curr_account = cfg.portfolio_dollar
-
         broker = typing.cast(Broker, self.group.broker)
-        broker.setup(initial_capital=cfg.portfolio_dollar,
+        broker.setup(initial_capital=cfg.account,
                      use_stop_loss=cfg.use_stop_loss,
                      use_stop_orders=cfg.use_stop_orders)
 
@@ -144,15 +134,6 @@ class StrategyLoosePants(Strategy):
         assert contracts >= 0, "Error in contract calculation"
         return contracts
 
-    @dataclass
-    class TradeCandidate:
-        instrument: Optional[Future] = None
-        direction: int = 0
-        momentum: float = 0.0
-        pos_size: float = 0.0
-        margin: float = 0.0
-        deleted: bool = False
-
     def next(self):
         # all this code is for testing only
         idx = self.idx
@@ -162,11 +143,8 @@ class StrategyLoosePants(Strategy):
             jj = 1
 
         # self.log.debug(f"next({idx}, {time})")
-
-        trade_candidates = []
-
+        
         broker = typing.cast(Broker, self.group.broker)
-        cfg = typing.cast(self, self.get_config())
 
         for instrument in self.instruments:
             instrument = typing.cast(Future, instrument)
@@ -178,6 +156,30 @@ class StrategyLoosePants(Strategy):
                 # stop loss occurred, don't try to enter on the same bar
                 continue
 
+            # for i in range(10):
+            #     symbol = future.symbol
+            #     open = self.open(future, idx)
+            #     high = self.high(future, idx)
+            #     low = self.low(future, idx)
+            #     close = self.close(future, idx)
+
+            # for i in range(10):
+            #     symbol = future.symbol
+            #     # open1, high1, low1, close1 = self.ohlc(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # close = self.get_close(future, idx)
+            #     # assert self.get_close(future, idx) == self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+            #     close1 = self.get_close_numpy(future, idx)
+
+            # buy and hold
+            # if broker.market_position(self, future) == 0:
+            #    broker.open_position(self, future, margin=future.metadata.margin)
+
             # enough_volume = self.volume(instrument, idx) > MIN_VOLUME
             enough_volume = True
 
@@ -186,164 +188,69 @@ class StrategyLoosePants(Strategy):
             #     closed_pnl = sum([trade.pnl * self.big_point - trade.costs for trade in broker.trades if trade.is_closed])
             #     curr_account = self.account + closed_pnl
             #     self.dollar_risk = curr_account * self.pct_risk
+            cfg = self.get_config()
             delay = -cfg.order_execution_delay
 
-            mp = broker.market_position(self, instrument)
+            if (broker.market_position(self, instrument) <= 0
+                    and self.close(instrument, idx - delay) > self.up(instrument, idx - delay - 1)):
+                # go long
+                if True or broker.market_position(self, instrument) < 0:
+                    # close current short position before going long
+                    broker.close_position(self, instrument)
 
-            if mp <= 0 and self.close(instrument, idx - delay) > self.up(instrument, idx - delay - 1):
-                # close current short position before going long
-                broker.close_position(self, instrument)
-                trade_candidates.append(self.TradeCandidate(instrument=instrument, direction=1,
-                                                            momentum=self._calc_mom(instrument, idx)))
+                contracts = self.calc_nr_contracts(instrument, cfg.dollar_risk,
+                                                   self.atr(instrument, idx) * cfg.atr_multiplier)
+                if contracts > 0:
+                    # go long if enough money for at least one contract
+                    if cfg.long and enough_volume:
+                        stop_loss = self.close_minus_atr(instrument, idx)
+                        mom = self._calc_mom(instrument, idx)
+                        # open a new long position, contracts > 0
+                        broker.open_position(self, instrument,
+                                             position=contracts, stop_loss=stop_loss,
+                                             margin=instrument.metadata.margin, momentum=mom)
 
-            if mp >= 0 and self.close(instrument, idx - delay) < self.down(instrument, idx - delay - 1):
+                else:
+                    # not enough money to trade
+                    self.set_value(instrument, 'MissedTrade', True, idx)
+
+            if broker.market_position(self, instrument) >= 0 and self.close(instrument, idx - delay) < self.down(instrument, idx - delay - 1):
                 # go short
-                # close current long position before going short
-                broker.close_position(self, instrument)
-                if instrument.metadata.sector not in skip_short:
-                    # note: here we negate momentum, as we are going to rank by momentum
-                    trade_candidates.append(self.TradeCandidate(instrument=instrument, direction=-1,
-                                                                momentum=-self._calc_mom(instrument, idx)))
+                if True or broker.market_position(self, instrument) > 0:
+                    # close current long position before going short
+                    broker.close_position(self, instrument)
 
-        self.process_trade_candidates(trade_candidates)
-
-        for instrument in self.instruments:
-            instrument = typing.cast(Future, instrument)
-            if not self.check_tradable_range(instrument, idx):
-                # self.log.debug(f"{idx} {time} {future}")
-                continue
+                contracts = self.calc_nr_contracts(instrument,
+                                                   cfg.dollar_risk,
+                                                   self.atr(instrument, idx) * cfg.atr_multiplier)
+                if contracts > 0:
+                    # go short if enough money for at least one contract
+                    if cfg.short and enough_volume:
+                        stop_loss = self.close_plus_atr(instrument, idx)
+                        mom = - self._calc_mom(instrument, idx)
+                        # open a new short position, contracts < 0
+                        broker.open_position(self, instrument,
+                                             position=-contracts,
+                                             stop_loss=stop_loss,
+                                             margin=instrument.metadata.margin,
+                                             momentum=mom)
+                else:
+                    # not enough money to trade
+                    # df.loc[self.timestamp(), 'MissedTrade'] = True # this is the same as set_value()
+                    self.set_value(instrument, 'MissedTrade', True, idx)
 
             # check for stop loss
             if cfg.use_stop_loss and broker.market_position(self, instrument) != 0:
                 if cfg.use_trailing_stop:
                     # update trailing stop
                     stop_loss = broker.get_stop_loss(self, instrument)
-                    mp = broker.market_position(self, instrument)
-                    if mp > 0:
+                    if broker.market_position(self, instrument) > 0:
                         stop_loss = max(stop_loss, self.close_minus_atr(instrument, idx))
-                    elif mp < 0:
+                    elif broker.market_position(self, instrument) < 0:
                         stop_loss = min(stop_loss, self.close_plus_atr(instrument, idx))
                     broker.set_stop_loss(self, instrument, stop_loss)
 
                 self.set_value(instrument, 'trailing_stop', broker.get_stop_loss(self, instrument), idx)     # for the charting only
-
-    def process_trade_candidates(self, trade_candidates: List[TradeCandidate]):
-        if len(trade_candidates) == 0:
-            # no trade candidates
-            return
-
-        idx = self.idx
-        cfg = typing.cast(self.MyConfig, self.get_config())
-        broker = typing.cast(Broker, self.group.broker)
-        open_trades = broker.open_trades(self)
-
-        if cfg.cumulative:
-            self.curr_account = cfg.portfolio_dollar + broker.closed_pnl(self)
-
-        #
-        # set position size and margin
-        #
-        trade_candidates_all = [deepcopy(tc) for tc in trade_candidates]
-
-        position_dollar = self.curr_account * cfg.risk_position
-
-        for tc in trade_candidates:
-            contracts = self.calc_nr_contracts(tc.instrument, position_dollar,
-                                               self.atr(tc.instrument, idx) * cfg.atr_multiplier)
-            if contracts > 0:
-                tc.pos_size = contracts
-                tc.margin = tc.instrument.metadata.margin * contracts
-            else:
-                tc.deleted = True
-
-        trade_candidates = [tc for tc in trade_candidates if not tc.deleted]
-
-        #
-        # reorder by momentum - small impact on performance...
-        # small to big is s bit better !
-        #
-        SMALL_TO_BIG = True
-        BIG_TO_SMALL = False
-        trade_candidates = sorted(trade_candidates, key=lambda tc: tc.momentum, reverse=SMALL_TO_BIG)
-
-        #
-        # restrict number of positions per sector
-        #
-        # @@@ len(open_trades) > 0 this may be wrong, not needed here ???
-        if cfg.max_positions_per_sector > 0 and len(open_trades) > 0:
-            # current number of open positions by sector
-            open_sector_counts: dict[str, int] = {}
-            for t in open_trades:
-                open_sector_counts[t.sector] = open_sector_counts.get(t.sector, 0) + 1
-            # no more than 3 trades in a sector
-            for tc in trade_candidates:
-                if open_sector_counts.get(tc.instrument.metadata.sector, 0) >= cfg.max_positions_per_sector:
-                    tc.deleted = True
-
-            trade_candidates = [t for t in trade_candidates if not t.deleted]
-
-        #
-        # restrict margin
-        #
-        if cfg.max_margin > 0:
-            # Sort by margin: lowest first (reverse=False), so we can get max.number of positions
-            trade_candidates = sorted(trade_candidates, key=lambda trc: trc.margin, reverse=False)
-
-            margin_cum = sum([trade.margin for trade in open_trades])
-            for tc in trade_candidates:
-                if margin_cum + tc.margin > self.curr_account * cfg.max_margin:
-                    tc.deleted = True
-                else:
-                    margin_cum += tc.margin
-            trade_candidates = [t for t in trade_candidates if not t.deleted]
-        #
-        # restrict number of open positions
-        #
-        curr_positions = len(open_trades)
-        max_pos = self.max_positions(cfg)   # or 10, 15,...
-        if max_pos > 0:
-            if curr_positions + len(trade_candidates) > max_pos:
-                # delete trades exceeding MAX_POSITIONS
-                nr_trades_to_delete = curr_positions + len(trade_candidates) - max_pos
-                for i in range(len(trade_candidates) - nr_trades_to_delete, len(trade_candidates)):
-                    # delete trades exceeding MAX_POSITIONS
-                    trade_candidates[i].deleted = True
-
-        #
-        # trade remaining candidates
-        #
-        trade_candidates = [t for t in trade_candidates if not t.deleted]
-
-        for tc in trade_candidates:
-            contracts = tc.pos_size
-            if tc.direction > 0:
-                # long
-                stop_loss = self.close_minus_atr(tc.instrument, idx)
-            else:
-                # short
-                stop_loss = self.close_plus_atr(tc.instrument, idx)
-                contracts = -contracts
-
-            if np.isnan(stop_loss):
-                j = 0
-
-            broker.open_position(self, tc.instrument,
-                                 position=contracts,
-                                 stop_loss=stop_loss,
-                                 margin=tc.instrument.metadata.margin,
-                                 momentum=tc.momentum)
-        #
-        # mark failed trade candidates
-        #
-        for tc in trade_candidates_all:
-            if tc not in trade_candidates:
-                self.set_value(tc.instrument, 'MissedTrade', True, idx)
-
-    @staticmethod
-    def max_positions(cfg) -> int:
-        if cfg.risk_all_positions <= 0:
-            return 0
-        return int(np.floor(1.0 / abs(cfg.risk_position) * cfg.risk_all_positions))
 
     @staticmethod
     def atr(instrument, idx) -> float:
@@ -372,6 +279,4 @@ class StrategyLoosePants(Strategy):
             self.close_all_trades()
         broker = typing.cast(Broker, self.group.broker)
         self.log.debug(f"Number of trades: {len(broker.trades)}")
-        self.log.error("curr_account: " + str(self.curr_account))
-
         # print_trades(self.broker.trades)

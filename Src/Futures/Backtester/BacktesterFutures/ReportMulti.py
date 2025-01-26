@@ -69,7 +69,7 @@ class ReportMulti(ReportBase):
     @staticmethod
     def extract_strategy_config(reports):
         strategy_config = reports[0].strategy.get_config()
-        required_attributes = ['cumulative', 'account', 'portfolio_dollar', 'risk_position',
+        required_attributes = ['cumulative', 'portfolio_dollar', 'risk_position',
                                'risk_all_positions', 'max_positions_per_sector', 'max_margin',
                                'atr_multiplier', 'period']
         strategy_config.check_attributes(required_attributes)

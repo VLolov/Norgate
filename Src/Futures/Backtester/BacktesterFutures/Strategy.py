@@ -99,5 +99,4 @@ class Strategy(Bb.StrategyBase, ABC):
                 broker.close_position(self, future)
             return False
 
-        if self.get_value(future, 'can_trade', idx):
-            return True
+        return self.get_value(future, 'can_trade', idx)

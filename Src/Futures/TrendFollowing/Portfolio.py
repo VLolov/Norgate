@@ -80,12 +80,12 @@ class Config:
     RISK_ALL_POSITIONS = 0.2    # % of portfolio; 0=don't check
     MAX_MARGIN = 0.4            # % of portfolio; 0=don't check margin
     ATR_MUL = 5                 # 2 or 3 or 5  # !!!
-    PERIOD = 11 * 21            # !!!
-    START_DATE = '1019-01-01'   # start of data: '1970-01-01' (1980-01-01)
+    PERIOD = 12 * 21            # !!!
+    START_DATE = '1980-01-01'   # start of data: '1970-01-01' (1980-01-01)
     END_DATE = '3015-04-01'
     USE_STOP_LOSS = True
     CUMULATIVE = False
-    PATCH_MICRO = True
+    PATCH_MICRO = False
     MULTI_PROCESSING = True
     SECTOR = ''
     BUY_AND_HOLD = False
@@ -103,7 +103,7 @@ sectors = ['Crypto', 'Currency', 'Energy', 'Volatility', 'Equity',
 skip_short = []
 # with skip: better sharp, higher return, but higher DD
 # skip shorts is important if a restricted list like tradable_symbols_1000 is used (29.11.2024)
-skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
+# skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
 
 skip_long = []
 # skip_long = ['Volatility']
@@ -968,7 +968,7 @@ def main_affordable_positions():
     cfg.START_DATE = '1010-06-01'   # start of data: '1970-01-01'
     cfg.USE_STOP_LOSS = False       # IMPORTANT!
     cfg.CUMULATIVE = False
-    cfg.PATCH_MICRO = True
+    cfg.PATCH_MICRO = False
     cfg.MULTI_PROCESSING = True
     cfg.BUY_AND_HOLD = False
 
