@@ -496,11 +496,11 @@ class LoosePants(Strategy):
                 if self.use_trailing_stop:
                     # update trailing stop
                     if broker.market_position > 0:
-                        self.stop_loss = max(self.stop_loss, self.get_value('CloseMinusATR', -1)    # @@@ self.close(-1) - 1 * self.atr(-1) * self.atr_multiplier
-                                            , self.get_value('ExitDown', -1))   # improves slightly
+                        self.stop_loss = max(self.stop_loss, self.get_value('CloseMinusATR', -1))    # @@@ self.close(-1) - 1 * self.atr(-1) * self.atr_multiplier
+                                            #, self.get_value('ExitDown', -1))   # improves slightly
                     elif broker.market_position < 0:
-                        self.stop_loss = min(self.stop_loss, self.get_value('ClosePlusATR')     # @@@ self.close(-1) + 1 * self.atr(-1) * self.atr_multiplier
-                                            , self.get_value('ExitUp', -1))  # improves slightly
+                        self.stop_loss = min(self.stop_loss, self.get_value('ClosePlusATR'))     # @@@ self.close(-1) + 1 * self.atr(-1) * self.atr_multiplier
+                                            # , self.get_value('ExitUp', -1))  # improves slightly
                     broker.set_stop_loss(self.stop_loss)
 
                 self.set_value('trailing_stop', self.stop_loss)     # for the charting only

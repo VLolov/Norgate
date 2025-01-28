@@ -84,7 +84,7 @@ class Config:
     START_DATE = '1980-01-01'   # start of data: '1970-01-01' (1980-01-01)
     END_DATE = '3015-04-01'
     USE_STOP_LOSS = True
-    CUMULATIVE = False
+    CUMULATIVE = True
     PATCH_MICRO = False
     MULTI_PROCESSING = True
     SECTOR = ''
@@ -100,10 +100,10 @@ sectors = ['Crypto', 'Currency', 'Energy', 'Volatility', 'Equity',
 
 # 'CL','HO','RB','NG','GC','LC','_C','_S','_W','SB', 'HG', 'CT', 'KC'
 
-skip_short = []
+# skip_short = []
 # with skip: better sharp, higher return, but higher DD
 # skip shorts is important if a restricted list like tradable_symbols_1000 is used (29.11.2024)
-# skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
+skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
 
 skip_long = []
 # skip_long = ['Volatility']
@@ -181,6 +181,8 @@ def calc_strategies(cfg, verbose=True) -> List[LoosePants]:
     for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
         # if future.symbol not in Future.micro_futures():
         #     continue
+        # if future.symbol not in ['CL', 'ES', 'GC']:
+        #     continue
 
         if future.symbol not in tradable_symbols_1000:
             continue
@@ -236,7 +238,7 @@ def calc_strategies(cfg, verbose=True) -> List[LoosePants]:
         # # print(f'Max front requested: {front}, modified: {modified_front}')
         front = modified_front
         # print("Symbol", future.symbol, "Front", front)
-        # front = 1   # 0: use Norgate's continuous contract; >0: use 'our' continuous contracts
+        front = 0   # 0: use Norgate's continuous contract; >0: use 'our' continuous contracts
 
         with duckdb.connect(DBConfig.DUCK_DB, read_only=True) as connection:
             data_access = DataAccess(connection, cfg.START_DATE, cfg.END_DATE)
@@ -272,7 +274,7 @@ def calc_strategies(cfg, verbose=True) -> List[LoosePants]:
 
         futures_data.append([future, data, strategy])
 
-
+    print(f"Nr. futures to be traded: {nr_futures_traded}")
 
     results = []
     if cfg.MULTI_PROCESSING:
@@ -322,13 +324,13 @@ def calc_strategies(cfg, verbose=True) -> List[LoosePants]:
 
 @dataclass
 class Statistics:
-    number_winning_trades = 0
-    number_loosing_trades = 0
-    number_rolls = 0
-    total_win = 0.0
-    total_loss = 0.0
-    avg_dit = 0.0
-    total_costs = 0.0
+    number_winning_trades: int = 0
+    number_loosing_trades: int = 0
+    number_rolls: int = 0
+    total_win: float = 0.0
+    total_loss: float = 0.0
+    avg_dit: float = 0.0
+    total_costs: float = 0.0
 
     def add_trade(self, t: Trade, big_point: float) -> None:
         if t.pnl > 0:
@@ -475,11 +477,11 @@ def combined_result(cfg: Config, strategy_results: List[LoosePants], verbose=Tru
             total = trades_summary_df['pnl'].sum()
             avg = trades_summary_df['pnl'].mean()
             costs = trades_summary_df['costs'].sum()
-            print(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
             trades_summary_df.reset_index(drop=True, inplace=True)
             trades_summary_df.sort_values(by='entry_date', inplace=True)
             print("Single trades with calculated contracts:")
             print(tabulate(trades_summary_df.sort_values(by='exit_date'), headers='keys', tablefmt='psql'))
+            print(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
 
         summary_df = pd.DataFrame(summary_rows)
 
@@ -571,6 +573,7 @@ def portfolio_with_constraints(cfg, strategy_results, constraints=True, verbose=
                 nr_contracts = pos_risk / stop_loss_distance / big_point
                 # if trade_candidate.position < 0: nr_contracts /= 2.0    # short position * 1/2
                 new_position = np.round(nr_contracts, 0)    # math rounding !!!
+                # new_position = 1
                 # new_position = nr_contracts                   # trade with partial contracts (test only)
                 # new_position = np.floor(nr_contracts)         # floor
 
@@ -680,6 +683,7 @@ def portfolio_with_constraints(cfg, strategy_results, constraints=True, verbose=
     total_return = cumulative_df['Total'].iloc[-1] - cumulative_df['Total'].iloc[0]
     # assert np.isclose(total_return, stat.total_return, atol=10), \
     #     f"Should be almost equal - total_return: {total_return} and stat: {stat.total_return}"
+    pass
 
     if verbose:
         strategy = r"Buy\ and\ Hold\ " if cfg.BUY_AND_HOLD else r"BacktesterFutures\ "
@@ -729,9 +733,9 @@ def portfolio_with_constraints(cfg, strategy_results, constraints=True, verbose=
         daily_returns = cumulative_df['Total'].pct_change().fillna(0)
         # print(f'Daily returns, min: {daily_returns.min()*100:.1f} %, max: {daily_returns.max()*100:.1f} %')
         # print(tabulate(pd.DataFrame(daily_returns*100), headers='keys', tablefmt='psql', floatfmt='.1f'))
-        # plot_histogram_returns(daily_returns[daily_returns <= -0.02], resample_rule='D')  # 'D', 'ME'
-        plot_histogram_returns(daily_returns, resample_rule='ME')  # 'D', 'ME', 'W', 'QE'
-        plot_qq_returns(daily_returns, resample_rule='ME')  # 'D', 'ME'
+
+        # plot_histogram_returns(daily_returns, resample_rule='ME')  # 'D', 'ME', 'W', 'QE'
+        # plot_qq_returns(daily_returns, resample_rule='ME')  # 'D', 'ME'
 
         save_pnl(cfg, cumulative_df)
 

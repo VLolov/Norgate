@@ -6,6 +6,7 @@ from .Portfolio import Portfolio
 from .Strategy import Strategy
 from .ReportSingle import ReportSingle
 from .PlotSingle import PlotSingle
-from .ReportMulti import ReportMulti
-from .PlotMulti import PlotMulti
+from .ReportPortfolio import ReportPortfolio
+from .PlotPortfolio import PlotPortfolio
 from .Config import Config
+from .Trade import Trade

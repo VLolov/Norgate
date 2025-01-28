@@ -9,14 +9,14 @@ import pandas as pd
 import logging
 
 from Futures.Backtester.BacktesterBase import PlotBase
-from Futures.Backtester.BacktesterFutures import ReportMulti
+from Futures.Backtester.BacktesterFutures import ReportPortfolio
 from Futures.Backtester.BacktesterFutures.plot_histogram_returns import plot_histogram_returns
 from Futures.Backtester.BacktesterFutures.plot_qq_returns import plot_qq_returns
 
 matplotlib.use("Qt5Agg")
 
 
-class PlotMulti(PlotBase):
+class PlotPortfolio(PlotBase):
     def __init__(self, name: str, plot_histogram=True, plot_qq=True):
         super().__init__(name)
         self._plot_histogram = plot_histogram
@@ -31,13 +31,13 @@ class PlotMulti(PlotBase):
         logging.getLogger('matplotlib.font_manager').disabled = True
         logging.getLogger('matplotlib.ticker').disabled = True
 
-        reporting = typing.cast(ReportMulti, self.report)
+        reporting = typing.cast(ReportPortfolio, self.report)
         assert reporting.ready, "ReportMulti not run"
 
-        report_multi = reporting.get_report_multi()
-        cumulative_df = report_multi.cumulative_df
-        table_df = report_multi.table_df
-        strategy_config = report_multi.config
+        report_portfolio = reporting.get_report_portfolio()
+        cumulative_df = report_portfolio.cumulative_df
+        table_df = report_portfolio.table_df
+        strategy_config = report_portfolio.config
 
         self.draw_chart(cumulative_df, strategy_config, table_df)
         daily_returns = cumulative_df['Total'].pct_change().fillna(0)
@@ -55,7 +55,7 @@ class PlotMulti(PlotBase):
         title = (
             r'$\bf{' + 'strategy'
             + (r'\ -\ Cumulative' if cfg.cumulative else '')
-            + (r'\ -\ ' + cfg.sector if cfg.sector else '')
+            + (r'\ -\ ' + (', '.join([sector for sector in cfg.sectors])) if cfg.sectors else '')
             + r'}$'
         )
 

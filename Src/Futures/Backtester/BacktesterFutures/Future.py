@@ -1,4 +1,3 @@
-import itertools
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
@@ -70,13 +69,13 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
     min_date = pd.Timestamp.max
     max_date = pd.Timestamp.min
 
-    nr_futures = itertools.count(0)
+    nr_futures = 0
 
     with duckdb.connect(DBConfig.DUCK_DB, read_only=True) as connection:
         for index, future in enumerate(tqdm(futures, desc='Prepare data', colour='green')):
             # if next(nr_futures) > 3:
             #     continue
-            front = 1
+            front = 0
             # print("Symbol", future.symbol, "Front", front)
 
             # database operation
@@ -84,14 +83,13 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
             data = LoosePants.get_data(data_access, future, front=front)
             # remove duckdb connection, as it cannot be pickled
             future.dta = None
-            # if future.symbol not in ['ES', 'CL']:
-            #     continue
-            if future.symbol not in tradable_symbols_1000:
-                continue
 
             if selected_symbols:
                 if future.symbol not in selected_symbols:
                     continue
+
+            if future.symbol not in tradable_symbols_1000:
+                continue
 
             if 'Micro' in future.name:
                 continue
@@ -111,7 +109,9 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
             min_date = min(min_date, data.index[0])
             max_date = max(max_date, data.index[-1])
 
-            next(nr_futures)
+            nr_futures += 1
+
+    print(f"Nr. futures to be traded: {nr_futures}")
 
     # full_date_range = pd.date_range(start=min_date, end=max_date, freq="B")     # "B" = business day
     # trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
@@ -129,7 +129,7 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
 
     full_date_range = pd.date_range(start=min_date, end=max_date, freq="B")     # "B" = business day
 
-    # trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
+    trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
     for future in tqdm(futures_new, desc='Prepare futures data', colour='green'):
         # print("new:", future_new.symbol)
         future_data = future.data
@@ -142,10 +142,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
         # IMPORTANT: replace future data of original Future, but leave first/last date unchanged !!!
         future.data = future_data
         # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
-        future.data_numpy = future.data.to_numpy()
-        pass
+        # future.data_numpy = future.data.to_numpy()
         future.data.index = pd.to_datetime(future.data.index)      # restore datetime index
-        pass
 
     return futures_new
 

@@ -2,7 +2,7 @@ import datetime
 import typing
 from copy import deepcopy
 from typing import Optional, Dict, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -16,14 +16,13 @@ skip_short = []
 
 class StrategyLoosePants(Strategy):
     @dataclass
-    class MyConfig(Config):
-        portfolio_dollar: float = 0
+    class LoosePantsConfig(Config):
+        portfolio_dollar: float = 1_000_000     # 0: get portfolio from Portfolio
         risk_position: float = 0.02  # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
         risk_all_positions: float = 0.2  # % of portfolio; 0=don't check
         max_margin: float = 0.4  # % of portfolio; 0=don't check margin
-        start_date: str = '1019-01-01'  # start of data: '1970-01-01' (1980-01-01)
-        end_date: str = '3015-04-01'
-        sector: str = ''
+
+        sectors: List[str] = field(default_factory=lambda: [])   # filter by sectors
         max_positions_per_sector: int = 0
 
         period: int = 12 * 21
@@ -32,29 +31,27 @@ class StrategyLoosePants(Strategy):
         use_stop_loss: bool = True
         use_trailing_stop: bool = True
         use_stop_orders: bool = True
-        short: bool = True
         long: bool = True
+        short: bool = True
         use_one_contract: bool = False
-        dollar_risk: float = 10_000  # if dollar_risk < 0: trade with 1 contract
-        cost_contract: float = 1.0  # USD to trade one contract, single side
+        cost_contract: float = 2  # USD to trade one contract, single side
         slippage_ticks: float = 2  # single side slippage, use TickSize to convert to USD
         cumulative: bool = False  # if cumulative=True, position size is calculated based on pct_risk and account size
-        # if cumulative=False, position size is calculated from dollar_risk
-        pct_risk: float = 0.02
         order_execution_delay: int = 0
         close_last_trading_day: bool = True
+
+        skip_short: List[str] = field(default_factory=lambda: skip_short)
 
     def __init__(self, name='LoosePants', config=None):
         super().__init__(name)
         if config is None:
-            self.set_config(StrategyLoosePants.MyConfig())
+            self.set_config(self.__class__.LoosePantsConfig())
 
         self.momentum_lookback: int = 21
         # self.warm_up_period: int = 0
         # self.broker: typing.Optional[Broker] = None
-        self.close_last_trading_day = True
         self.curr_account = 0.0
-        self.log.warning("Strategy initialized")
+        self.log.debug(f"Strategy {name} created")
 
     def calc_indicators(self):
         for instrument in self.instruments:
@@ -89,7 +86,10 @@ class StrategyLoosePants(Strategy):
             df['trailing_stop'] = np.nan
 
     def _calc_mom(self, instrument, idx):
-        return self.close(instrument, idx) / self.close(instrument, idx - self.momentum_lookback) - 1
+        divisor = self.close(instrument, idx - self.momentum_lookback) != 0
+        if divisor == 0:
+            return 0.0
+        return self.close(instrument, idx) / divisor - 1
 
     def _calc_vol(self, instrument, idx):
         # volatility of returns
@@ -97,16 +97,16 @@ class StrategyLoosePants(Strategy):
         return vol
 
     def init(self):
-        self.log.debug(f"init({self.idx}, {self.dt})")
+        self.log.debug(f"init(), dt:{self.dt})")
 
         # modify parameters of Strategy class
-        cfg = typing.cast(self, self.get_config())
+        cfg = typing.cast(self.LoosePantsConfig, self.get_config())
         self.cost_contract = cfg.cost_contract
         self.slippage_ticks = cfg.slippage_ticks
-        self.close_last_trading_day = cfg.close_last_trading_day
 
         # get initial_capital from portfolio
-        cfg.portfolio_dollar = self.group.backtester.portfolio.initial_capital
+        if cfg.portfolio_dollar == 0:
+            cfg.portfolio_dollar = self.group.backtester.portfolio.initial_capital
         self.curr_account = cfg.portfolio_dollar
 
         broker = typing.cast(Broker, self.group.broker)
@@ -120,14 +120,14 @@ class StrategyLoosePants(Strategy):
         self.set_tradable_range_instruments()
         self.calc_indicators()
 
-    @staticmethod
-    def get_close(instrument, idx):
-        # return instrument.data.iloc[idx]['Open']
-        return instrument.data['Close'].iloc[idx]        # this is much faster (3-4 times)
-
-    @staticmethod
-    def get_close_numpy(instrument, idx):
-        return instrument.data_numpy[idx, Future.CLOSE]
+    # @staticmethod
+    # def get_close(instrument, idx):
+    #     # return instrument.data.iloc[idx]['Open']
+    #     return instrument.data['Close'].iloc[idx]        # this is much faster (3-4 times)
+    #
+    # @staticmethod
+    # def get_close_numpy(instrument, idx):
+    #     return instrument.data_numpy[idx, Future.CLOSE]
 
     def calc_nr_contracts(self, instrument: Future, position_dollar, stop_loss_distance):
         contracts = 1.0
@@ -146,11 +146,11 @@ class StrategyLoosePants(Strategy):
 
     @dataclass
     class TradeCandidate:
-        instrument: Optional[Future] = None
-        direction: int = 0
-        momentum: float = 0.0
-        pos_size: float = 0.0
-        margin: float = 0.0
+        instrument: Future
+        direction: int
+        momentum: float
+        pos_size: float = 0
+        margin: float = 0
         deleted: bool = False
 
     def next(self):
@@ -166,12 +166,15 @@ class StrategyLoosePants(Strategy):
         trade_candidates = []
 
         broker = typing.cast(Broker, self.group.broker)
-        cfg = typing.cast(self, self.get_config())
+        cfg = typing.cast(self.LoosePantsConfig, self.get_config())
 
         for instrument in self.instruments:
             instrument = typing.cast(Future, instrument)
             if not self.check_tradable_range(instrument, idx):
                 # self.log.debug(f"{idx} {time} {future}")
+                continue
+
+            if cfg.sectors and instrument.metadata.sector not in cfg.sectors:
                 continue
 
             if broker.update(self, instrument):
@@ -191,16 +194,19 @@ class StrategyLoosePants(Strategy):
             mp = broker.market_position(self, instrument)
 
             if mp <= 0 and self.close(instrument, idx - delay) > self.up(instrument, idx - delay - 1):
+                    # and self.close(instrument, idx - delay - 1) < self.up(instrument, idx - delay - 2):
                 # close current short position before going long
                 broker.close_position(self, instrument)
-                trade_candidates.append(self.TradeCandidate(instrument=instrument, direction=1,
-                                                            momentum=self._calc_mom(instrument, idx)))
+                if cfg.long:
+                    trade_candidates.append(self.TradeCandidate(instrument=instrument, direction=1,
+                                                                momentum=self._calc_mom(instrument, idx)))
 
             if mp >= 0 and self.close(instrument, idx - delay) < self.down(instrument, idx - delay - 1):
+                    # and self.close(instrument, idx - delay - 1) > self.down(instrument, idx - delay - 2):
                 # go short
                 # close current long position before going short
                 broker.close_position(self, instrument)
-                if instrument.metadata.sector not in skip_short:
+                if cfg.short and instrument.metadata.sector not in cfg.skip_short:
                     # note: here we negate momentum, as we are going to rank by momentum
                     trade_candidates.append(self.TradeCandidate(instrument=instrument, direction=-1,
                                                                 momentum=-self._calc_mom(instrument, idx)))
@@ -214,11 +220,11 @@ class StrategyLoosePants(Strategy):
                 continue
 
             # check for stop loss
-            if cfg.use_stop_loss and broker.market_position(self, instrument) != 0:
+            mp = broker.market_position(self, instrument)
+            if cfg.use_stop_loss and mp != 0:
                 if cfg.use_trailing_stop:
                     # update trailing stop
                     stop_loss = broker.get_stop_loss(self, instrument)
-                    mp = broker.market_position(self, instrument)
                     if mp > 0:
                         stop_loss = max(stop_loss, self.close_minus_atr(instrument, idx))
                     elif mp < 0:
@@ -233,7 +239,7 @@ class StrategyLoosePants(Strategy):
             return
 
         idx = self.idx
-        cfg = typing.cast(self.MyConfig, self.get_config())
+        cfg = typing.cast(self.LoosePantsConfig, self.get_config())
         broker = typing.cast(Broker, self.group.broker)
         open_trades = broker.open_trades(self)
 
@@ -368,10 +374,10 @@ class StrategyLoosePants(Strategy):
     def last(self):
         self.log.debug(f"last({self.idx}, {self.dt})")
 
-        if self.close_last_trading_day:
+        if self.get_config().close_last_trading_day:
             self.close_all_trades()
         broker = typing.cast(Broker, self.group.broker)
         self.log.debug(f"Number of trades: {len(broker.trades)}")
-        self.log.error("curr_account: " + str(self.curr_account))
+        self.log.debug("curr_account: " + str(self.curr_account))
 
-        # print_trades(self.broker.trades)
+        # Trade.print_trades(self.group.broker.trades)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
 
@@ -7,11 +8,13 @@ import pandas as pd
 
 from Futures.Backtester.BacktesterBase.Base import Base
 
+from .ConfigBase import ConfigBase
+
 if TYPE_CHECKING:
     from .GroupBase import GroupBase
     from .InstrumentBase import InstrumentBase
     from .TradeBase import TradeBase
-    from .ConfigBase import ConfigBase
+    # from .ConfigBase import ConfigBase
 
 
 class StrategyBase(Base, ABC):
@@ -45,9 +48,11 @@ class StrategyBase(Base, ABC):
         return self.group.instruments
 
     def set_config(self, config):
+        assert isinstance(config, ConfigBase), f"Did you pass config class instead of config instance? {config}"
         self._config = config
 
     def get_config(self):
+        # we assume the child class has a class 'Config'
         return self._config
 
     @abstractmethod

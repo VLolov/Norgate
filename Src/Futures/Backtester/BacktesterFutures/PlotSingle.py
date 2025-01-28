@@ -48,8 +48,8 @@ class PlotSingle(PlotBase):
         
         future_name = (
             f'{instrument}\n'
-            f'Atr.mul: {cfg.atr_multiplier}, Risk : ${cfg.dollar_risk:,.0f}, Stop orders: {cfg.use_stop_orders}, '
-            f'Cumulative: {cfg.cumulative}, Pct_risk: {cfg.pct_risk}, Front: {front}\n'
+            f'Atr.mul: {cfg.atr_multiplier}, Stop orders: {cfg.use_stop_orders}, '
+            f'Cumulative: {cfg.cumulative}, Risk_position: {cfg.risk_position}, Front: {front}\n'
             f'Nr.trades: {report.nr_trades}, Missed: {report.nr_missed_trades}, Rolls: {report.nr_rolls},'
             f' Avg.trade: ${report.avg_trade:,.0f}, Avg.contracts: {report.avg_contracts:,.2f}, Avg.DIT: {report.avg_dit:.0f},'
             f' Avg.pos.size: ${report.avg_position_size_dollar:,.0f},'

@@ -19,9 +19,9 @@ DATA_DIRS = [
 DATA_DIRS = []  # don't save result in files
 
 
-class ReportMulti(ReportBase):
+class ReportPortfolio(ReportBase):
     @dataclass
-    class ReportMultiResult:
+    class ReportPortfolioResult:
         cumulative_df: Optional[pd.DataFrame] = None
         table_df: Optional[pd.DataFrame] = None
         config: Optional[Config] = None
@@ -34,7 +34,7 @@ class ReportMulti(ReportBase):
         self._report_single: Optional[ReportSingle] = None
 
         # results:
-        self._report_multi: Optional[ReportMulti.ReportMultiResult] = None
+        self._report_portfolio: Optional[ReportPortfolio.ReportPortfolioResult] = None
 
         self._strategy_config = None
         self.ready = False
@@ -45,11 +45,11 @@ class ReportMulti(ReportBase):
     def set_report_single(self, report_single):
         self._report_single = report_single
 
-    def get_report_multi(self):
-        return self._report_multi
+    def get_report_portfolio(self):
+        return self._report_portfolio
 
     def run(self):
-        self.log.info(f'Creating multi report: "{self.name}"')
+        self.log.info(f'Creating portfolio report: "{self.name}"')
 
         assert self._report_single.ready, "Single report must be run first"
 
@@ -60,23 +60,25 @@ class ReportMulti(ReportBase):
 
         df, statistics = self.combined_result(reports)
         table = self.calc_table(df, statistics)
-        self._report_multi = ReportMulti.ReportMultiResult(cumulative_df=df,
-                                                           table_df=table,
-                                                           config=self._strategy_config)
+        self._report_portfolio = ReportPortfolio.ReportPortfolioResult(cumulative_df=df,
+                                                                       table_df=table,
+                                                                       config=self._strategy_config)
         self.save_pnl(df)
         self.ready = True
 
     @staticmethod
     def extract_strategy_config(reports):
-        strategy_config = reports[0].strategy.get_config()
-        required_attributes = ['cumulative', 'portfolio_dollar', 'risk_position',
-                               'risk_all_positions', 'max_positions_per_sector', 'max_margin',
-                               'atr_multiplier', 'period']
+        strategy_config = typing.cast(Config, reports[0].strategy.get_config())
+        required_attributes = [
+            'cumulative', 'portfolio_dollar', 'risk_position',
+            'risk_all_positions', 'max_positions_per_sector', 'max_margin',
+            'atr_multiplier', 'period'
+        ]
         strategy_config.check_attributes(required_attributes)
         return strategy_config
 
     def combined_result(self, reports: List[ReportSingle.StrategyInstrumentReport]) \
-            -> typing.Tuple[pd.DataFrame, 'ReportMulti.Statistics']:
+            -> typing.Tuple[pd.DataFrame, 'ReportPortfolio.Statistics']:
         
         account_size = self.backtester.portfolio.initial_capital
         
@@ -98,19 +100,15 @@ class ReportMulti(ReportBase):
         cumulative_df['Nr.Positions_Short'] = 0
         cumulative_df['Margin'] = 0.0
     
-        stat = self.Statistics()
-    
-        sum_dit = 0
-    
         summary_rows = []
         tradable = []
-        # re-connect to DB to re-calculate strategy performance
-    
         trades_rows = []
-        # get min/max date from strategies' data
         empty_df = pd.DataFrame(index=dates)
-    
+        stat = self.Statistics()
+
+        sum_dit = 0
         idx = 0
+        t_idx = 0
         for report in reports:
             # strategy.data_access = data_access    # restore access to duckdb, which is needed in lp.calc_performance()
             instrument = typing.cast(Future, report.instrument)
@@ -134,20 +132,24 @@ class ReportMulti(ReportBase):
             pos = expanded_df[expanded_df['Position'] != 0]
             cumulative_df.loc[pos.index, 'Nr.Positions'] += 1
     
-            margin = expanded_df[expanded_df['Margin'] > 0]
-            cumulative_df.loc[pos.index, 'Margin'] += margin['Margin']
+            # margin = expanded_df[expanded_df['Margin'] > 0]
+            # cumulative_df.loc[pos.index, 'Margin'] += margin['Margin']
+
+            cumulative_df.loc[pos.index, 'Margin'] += expanded_df['Margin']
+
             # strategy.broker.trades returns all trades, deleted or not deleted
             nr_trades = len([t for t in report.trades if not t.deleted])
             nr_missed_trades = len([t for t in report.trades if t.deleted])
             metadata = instrument.metadata
-            summary_row = {'idx': idx, 'symbol': instrument.symbol, 'future.name': metadata.name,
-                           'sector': metadata.sector,
-                           'currency': metadata.currency,
-                           'exchange': metadata.exchange, 'nr.trades': nr_trades,
-                           'missed.trades': nr_missed_trades, 'av.contracts': np.round(report.avg_contracts, 1),
-                           'pnl': np.round(report.final_pnl,0),
-                           'Tradable': ('*' if nr_trades > nr_missed_trades else '')
-                           }
+            summary_row = {
+                'idx': idx, 'symbol': instrument.symbol, 'future.name': metadata.name,
+                'sector': metadata.sector,
+                'currency': metadata.currency,
+                'exchange': metadata.exchange, 'nr.trades': nr_trades,
+                'missed.trades': nr_missed_trades, 'av.contracts': np.round(report.avg_contracts, 1),
+                'pnl': np.round(report.final_pnl, 0),
+                'Tradable': ('*' if nr_trades > nr_missed_trades else '')
+            }
             idx += 1
             summary_rows.append(summary_row)
             if nr_trades > nr_missed_trades:
@@ -155,19 +157,29 @@ class ReportMulti(ReportBase):
     
             # print(strategy.future.symbol, strategy.nr_trades)
             sum_dit += sum([t.dit for t in report.trades if not t.deleted])
-    
-            for t in [t for t in report.trades if
-                      not t.deleted]:  # and t.entry_date.to_pydatetime().year == 2024]:
+
+            for t in [t for t in report.trades]:  # if t.entry_date.to_pydatetime().year == 2024]:
+                if t.deleted:
+                    self.log.error(f"Shouldn't have deleted trades here. Skipping deleted trade: {t}")
+                    continue
+
                 trade_dollar_risk = abs((t.entry_price - t.initial_stop_loss) * t.position * metadata.big_point)
     
-                tx = {
+                trade_row = {
+                    'idx': t_idx,
                     'symbol': t.symbol,
                     'sector': t.sector,
-                    'entry_date': t.entry_date, 'entry_price': t.entry_price,
-                    'exit_date': t.exit_date, 'exit_price': t.exit_price, 'margin': t.margin,
-                    'initial_stop_loss': t.initial_stop_loss, 'stop_loss': t.stop_loss,
+                    'strategy': t.strategy.name,
+                    'entry_date': t.entry_date,
+                    'entry_price': t.entry_price,
+                    'exit_date': t.exit_date,
+                    'exit_price': t.exit_price,
+                    'margin': t.margin,
+                    'initial_stop_loss': t.initial_stop_loss,
+                    'stop_loss': t.stop_loss,
                     'position': t.position,
-                    'closed': t.is_closed, 'is_stop_loss': t.is_stop_loss,
+                    'closed': t.is_closed,
+                    'is_stop_loss': t.is_stop_loss,
                     'dit': t.dit,
                     'rolls': t.rolls,
     
@@ -175,38 +187,39 @@ class ReportMulti(ReportBase):
                     'dollar_risk': np.round(trade_dollar_risk, 0),
                     'pnl': np.round(t.pnl * metadata.big_point, 0)
                 }
-    
-                trades_rows.append(tx)
+                t_idx += 1
+                trades_rows.append(trade_row)
                 stat.add_trade(t, metadata.big_point)
     
         # all strategies processed
     
         if self._verbose:
+            self.log.info("Single trades:")
             trades_summary_df = pd.DataFrame(trades_rows)
             if len(trades_summary_df) > 0:
                 total = trades_summary_df['pnl'].sum()
                 avg = trades_summary_df['pnl'].mean()
                 costs = trades_summary_df['costs'].sum()
-                self.log.info(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
                 trades_summary_df.reset_index(drop=True, inplace=True)
-                trades_summary_df.sort_values(by='entry_date', inplace=True)
-                self.log.info("Single trades with calculated contracts:")
-                self.log.info("\n" + tabulate(trades_summary_df.sort_values(by='exit_date'), headers='keys', tablefmt='psql'))
-    
+                # trades_summary_df.sort_values(by='entry_date', inplace=True)
+                self.log.info('\n' + tabulate(trades_summary_df.sort_values(by='entry_date'), headers='keys', tablefmt='psql'))
+                self.log.info(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
+
             summary_df = pd.DataFrame(summary_rows)
-    
-            self.log.debug('Combined result with calculated contracts:')
-            self.log.debug(tabulate(summary_df.sort_values(by='symbol'), headers='keys', tablefmt='psql'))
-            self.log.debug(f'*** Pnl of all trades: {summary_df["pnl"].sum():,.0f}, {stat.total_return:,.0f}')
-    
+
             stat.avg_dit = sum_dit / stat.number_trades if stat.number_trades > 0 else 0.0
-    
-            # print(f'*** Filter av.contracts > 1')
-            # filtered_df = summary_df[summary_df['av.contracts'] > 1]
-            self.log.debug(f'Tradable {len(tradable)} symbols:')
-            self.log.debug('[' + ', '.join(f'{sym}' for sym in tradable) + ']')
-            # print(tabulate(filtered_df, headers='keys', tablefmt='psql'))
-            # print(tabulate(filtered_df, headers='keys', tablefmt='psql'))
+
+            if self._verbose:
+                self.log.info('Summary by instrument:')
+                self.log.info('\n' + tabulate(summary_df.sort_values(by='symbol'), headers='keys', tablefmt='psql'))
+                self.log.info(f'*** Pnl of all trades: {summary_df["pnl"].sum():,.0f}, {stat.total_return:,.0f}')
+        
+                # print(f'*** Filter av.contracts > 1')
+                # filtered_df = summary_df[summary_df['av.contracts'] > 1]
+                self.log.info(f'Tradable {len(tradable)} symbols:')
+                self.log.info('[' + ', '.join(f'{sym}' for sym in tradable) + ']')
+                # print(tabulate(filtered_df, headers='keys', tablefmt='psql'))
+                # print(tabulate(filtered_df, headers='keys', tablefmt='psql'))
     
         cumulative_df['Daily.return.pct'] = cumulative_df['Total'].pct_change().fillna(0).mul(100).round(1)
         cumulative_df['Daily.return.USD'] = (cumulative_df['Total'] - cumulative_df['Total'].shift()).fillna(0).round(0)

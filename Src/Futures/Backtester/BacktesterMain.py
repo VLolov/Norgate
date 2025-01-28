@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from Futures.Backtester.BacktesterFutures import *
+from Futures.Backtester.StrategyBuyAndHold import StrategyBuyAndHold
 from Futures.Backtester.StrategyLoosePants import StrategyLoosePants
 from Futures.Backtester.logutil import logger
 
@@ -19,7 +20,7 @@ def main():
     bt.set_portfolio(p)
     p.set_initial_capital(100_000).set_backtester(bt)
 
-    group = Group("My first group")
+    group = Group("First Group")
     group.add_backtester(bt)
     bt.add_group(group)
 
@@ -27,26 +28,30 @@ def main():
     broker.set_group(group)
     group.set_broker(broker)
 
-    report_single = ReportSingle("My Single Report").set_backtester(bt)
+    report_single = ReportSingle("Single Report")
+    report_single.set_backtester(bt)
     bt.add_report(report_single)
-    plot_single = PlotSingle("My Single Plot").set_report(report_single)
-    report_single.add_plot(plot_single)
 
-    report_multi = ReportMulti("My Multi report_multi", verbose=True).set_backtester(bt)
+    # plot_single = PlotSingle("My Single Plot").set_report(report_single)
+    # report_single.add_plot(plot_single)
+
+    report_multi = ReportPortfolio("Portfolio Report", verbose=True).set_backtester(bt)
     report_multi.set_report_single(report_single)
     bt.add_report(report_multi)
-    plot_multi = PlotMulti("My Multi Plot", plot_histogram=False, plot_qq=False)
+    plot_multi = PlotPortfolio("Portfolio Plot", plot_histogram=False, plot_qq=False)
     plot_multi.set_report(report_multi)
     report_multi.add_plot(plot_multi)
 
-    strategy = StrategyLoosePants()
-    strategy.set_config(StrategyLoosePants.MyConfig())
+    # for strategy_class in [StrategyBuyAndHold]:
+    for strategy_class in [StrategyLoosePants]:
+    # for strategy_class in [StrategyLoosePants, StrategyBuyAndHold]:
+        strategy = strategy_class()
+        group.add_strategies(strategy)
+        strategy.set_group(group)
 
-    group.add_strategies(strategy)
-    strategy.set_group(group)
 
-    selected_symbols = ['CL', 'ES', 'GC']
-    selected_symbols = []
+    selected_symbols = ['GC', 'CL', 'ES']
+    selected_symbols = ['GC']
     futures = get_futures(start_date='1980-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
     group.add_instruments(futures)
 
@@ -71,26 +76,3 @@ if __name__ == "__main__":
     sys.excepthook = except_hook
 
     main()
-
-
-@dataclass
-class Config1:
-    i: int = 1
-
-
-@dataclass
-class Config2(Config1):
-    k: int = 3
-
-
-@dataclass
-class Config3(Config2):
-    i: int = 3  # error - c3.int remains = 1 ?!?
-    l: int = 4
-
-
-c1 = Config1()
-c2 = Config2()
-c3 = Config3()
-
-pass

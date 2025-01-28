@@ -180,7 +180,7 @@ class ReportSingle(ReportBase):
         # add trading costs
         rolls = 0
         self.total_costs = 0.0
-        trades = [typing.cast(Trade, t) for t in broker.trades if t.instrument == instrument]
+        trades = [typing.cast(Trade, t) for t in broker.trades if t.instrument == instrument and t.strategy == strategy]
 
         report.trades = trades
 
