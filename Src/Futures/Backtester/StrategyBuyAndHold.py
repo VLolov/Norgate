@@ -1,5 +1,5 @@
 import typing
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -9,7 +9,7 @@ from Futures.Backtester.BacktesterFutures import *
 class StrategyBuyAndHold(Strategy):
     @dataclass
     class BuyAndHoldConfig(Config):
-        portfolio_dollar: float = 1000_000     # 0: get portfolio from Portfolio
+        portfolio_dollar: float = 100_000     # 0: get portfolio from Portfolio
         # if use_one_contract = False, buy contracts for price = portfolio_dollar / nr_positions (/ big_point)
         use_one_contract: bool = False
         close_last_trading_day: bool = True
@@ -35,6 +35,7 @@ class StrategyBuyAndHold(Strategy):
 
     def init(self):
         self.log.debug(f"init(), dt:{self.dt})")
+        super().init()
 
         # modify parameters of Strategy class
         cfg = self.get_config()

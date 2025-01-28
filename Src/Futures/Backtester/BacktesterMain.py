@@ -43,15 +43,15 @@ def main():
     report_multi.add_plot(plot_multi)
 
     # for strategy_class in [StrategyBuyAndHold]:
-    for strategy_class in [StrategyLoosePants]:
-    # for strategy_class in [StrategyLoosePants, StrategyBuyAndHold]:
+    # for strategy_class in [StrategyLoosePants]:
+    for strategy_class in [StrategyLoosePants, StrategyBuyAndHold]:
         strategy = strategy_class()
         group.add_strategies(strategy)
         strategy.set_group(group)
 
 
-    selected_symbols = ['GC', 'CL', 'ES']
-    selected_symbols = ['GC']
+    # selected_symbols = ['GC', 'CL', 'ES']
+    selected_symbols = ['ES']
     futures = get_futures(start_date='1980-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
     group.add_instruments(futures)
 

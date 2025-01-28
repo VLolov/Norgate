@@ -62,35 +62,34 @@ class BacktesterBase(Base, ABC):
             tabs = '\t' * lvl
             self.log.debug(f'{tabs} {obj} {name} {symbol} {state}')
 
-        level = 0
+        level = 1
         self.log.debug("")
         log(self, level)
-        level += 1
+
         log(f'Portfolio:', level)
         log(self.portfolio, level + 1)
 
         log(f'Reports ({len(self.reports)}):', level)
-        level += 1
         for report in self.reports:
-            log(report, level)
+            log(report, level + 1)
 
             for plot in report.plots:
-                log(plot, level + 1)
+                log(plot, level + 2)
 
-        log(f'Groups ({len(self.groups)}):', level - 1)
+        log(f'Groups ({len(self.groups)}):', level)
         for group in self.groups:
-            log(group, level)
-            log(group.broker, level + 1)
+            log(group, level + 1)
+            log(group.broker, level + 2)
 
             # log(f"Trades ({len(group.broker.trades)}):", level + 2) @@@
             # for trade in group.broker.trades:
             #     log(trade, level + 3)
 
-            log(f'Strategies ({len(group.strategies)}):', level - 1)
+            log(f'Strategies ({len(group.strategies)}):', level + 2)
             for strategy in group.strategies:
-                log(strategy, level)
+                log(strategy, level + 3)
 
-            log(f'Instruments ({len(group.instruments)}):', level - 1)
+            log(f'Instruments ({len(group.instruments)}):', level + 2)
             for instrument in group.instruments:
-                log(instrument, level)
+                log(instrument, level + 3)
 

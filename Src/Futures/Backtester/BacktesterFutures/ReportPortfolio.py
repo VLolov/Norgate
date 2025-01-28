@@ -82,11 +82,12 @@ class ReportPortfolio(ReportBase):
         
         account_size = self.backtester.portfolio.initial_capital
         
-        # gather instruments
-        instruments = []
+        # gather instruments (no duplicates)
+        instruments = set()
         for report in reports:
-            instruments.append(report.instrument)
-    
+            instruments.add(report.instrument)
+        instruments = list(instruments)
+
         dates = self.strategies_dates(instruments)
     
         cumulative_df = pd.DataFrame(index=dates)
@@ -142,11 +143,15 @@ class ReportPortfolio(ReportBase):
             nr_missed_trades = len([t for t in report.trades if t.deleted])
             metadata = instrument.metadata
             summary_row = {
-                'idx': idx, 'symbol': instrument.symbol, 'future.name': metadata.name,
+                'idx': idx,
+                'symbol': instrument.symbol,
+                'future.name': metadata.name,
                 'sector': metadata.sector,
                 'currency': metadata.currency,
-                'exchange': metadata.exchange, 'nr.trades': nr_trades,
-                'missed.trades': nr_missed_trades, 'av.contracts': np.round(report.avg_contracts, 1),
+                'exchange': metadata.exchange,
+                'nr.trades': nr_trades,
+                'missed.trades': nr_missed_trades,
+                'av.contracts': np.round(report.avg_contracts, 1),
                 'pnl': np.round(report.final_pnl, 0),
                 'Tradable': ('*' if nr_trades > nr_missed_trades else '')
             }
@@ -158,10 +163,7 @@ class ReportPortfolio(ReportBase):
             # print(strategy.future.symbol, strategy.nr_trades)
             sum_dit += sum([t.dit for t in report.trades if not t.deleted])
 
-            for t in [t for t in report.trades]:  # if t.entry_date.to_pydatetime().year == 2024]:
-                if t.deleted:
-                    self.log.error(f"Shouldn't have deleted trades here. Skipping deleted trade: {t}")
-                    continue
+            for t in [t for t in report.trades if not t.deleted]:  # if t.entry_date.to_pydatetime().year == 2024]:
 
                 trade_dollar_risk = abs((t.entry_price - t.initial_stop_loss) * t.position * metadata.big_point)
     
@@ -203,7 +205,7 @@ class ReportPortfolio(ReportBase):
                 trades_summary_df.reset_index(drop=True, inplace=True)
                 # trades_summary_df.sort_values(by='entry_date', inplace=True)
                 self.log.info('\n' + tabulate(trades_summary_df.sort_values(by='entry_date'), headers='keys', tablefmt='psql'))
-                self.log.info(f'Trades, total {total:,.0f}, av.trade={avg:.0f}, costs={costs:,.0f}')
+                self.log.info(f'Trades, total {total:,.0f}, av.trade={avg:,.0f}, costs={costs:,.0f}')
 
             summary_df = pd.DataFrame(summary_rows)
 

@@ -34,8 +34,8 @@ class StrategyLoosePants(Strategy):
         long: bool = True
         short: bool = True
         use_one_contract: bool = False
-        cost_contract: float = 2  # USD to trade one contract, single side
-        slippage_ticks: float = 2  # single side slippage, use TickSize to convert to USD
+        cost_contract: float = 0    ############ 2  # USD to trade one contract, single side
+        slippage_ticks: float = 0   ############# 2  # single side slippage, use TickSize to convert to USD
         cumulative: bool = False  # if cumulative=True, position size is calculated based on pct_risk and account size
         order_execution_delay: int = 0
         close_last_trading_day: bool = True
@@ -98,6 +98,7 @@ class StrategyLoosePants(Strategy):
 
     def init(self):
         self.log.debug(f"init(), dt:{self.dt})")
+        super().init()
 
         # modify parameters of Strategy class
         cfg = typing.cast(self.LoosePantsConfig, self.get_config())
@@ -249,7 +250,8 @@ class StrategyLoosePants(Strategy):
         #
         # set position size and margin
         #
-        trade_candidates_all = [deepcopy(tc) for tc in trade_candidates]
+        # trade_candidates_all = [deepcopy(tc) for tc in trade_candidates]
+        trade_candidates_all = deepcopy(trade_candidates)
 
         position_dollar = self.curr_account * cfg.risk_position
 
@@ -330,9 +332,6 @@ class StrategyLoosePants(Strategy):
                 stop_loss = self.close_plus_atr(tc.instrument, idx)
                 contracts = -contracts
 
-            if np.isnan(stop_loss):
-                j = 0
-
             broker.open_position(self, tc.instrument,
                                  position=contracts,
                                  stop_loss=stop_loss,
@@ -344,6 +343,7 @@ class StrategyLoosePants(Strategy):
         for tc in trade_candidates_all:
             if tc not in trade_candidates:
                 self.set_value(tc.instrument, 'MissedTrade', True, idx)
+                tc.deleted = True
 
     @staticmethod
     def max_positions(cfg) -> int:

@@ -27,7 +27,7 @@ class ReportSingle(ReportBase):
         self.log.info(f'Creating single report: "{self.name}"')
         strategies = self.get_strategies()
         for strategy in strategies:
-            for instrument in strategy.group.instruments:
+            for instrument in strategy.instruments:
                 strategy = typing.cast(Strategy, strategy)
                 instrument = typing.cast(Future, instrument)
                 # self.log.debug(f"Calculating performance for strategy: {strategy}, instrument: {instrument}")
@@ -109,7 +109,7 @@ class ReportSingle(ReportBase):
         df['MissedTrade'] = False
 
         # for trade in filter(lambda t: t.instrument == instrument, broker.trades):
-        trades = [typing.cast(Trade, t) for t in broker.trades if t.instrument == instrument]
+        trades = [typing.cast(Trade, t) for t in broker.trades if not t.deleted and t.instrument == instrument]
         for trade in trades:
             # print(trade)
             if len(trade.trade_dates) < 2:
