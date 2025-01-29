@@ -1,5 +1,4 @@
 import logging
-from dataclasses import dataclass
 
 from Futures.Backtester.BacktesterFutures import *
 from Futures.Backtester.StrategyBuyAndHold import StrategyBuyAndHold
@@ -27,6 +26,7 @@ def main():
     broker = Broker()
     broker.set_group(group)
     group.set_broker(broker)
+    broker.setup(use_stop_loss=True, use_stop_orders=True)
 
     report_single = ReportSingle("Single Report")
     report_single.set_backtester(bt)
@@ -49,9 +49,8 @@ def main():
         group.add_strategies(strategy)
         strategy.set_group(group)
 
-
-    # selected_symbols = ['GC', 'CL', 'ES']
-    selected_symbols = ['ES']
+    selected_symbols = ['GC', 'CL', 'ES']
+    # selected_symbols = []
     futures = get_futures(start_date='1980-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
     group.add_instruments(futures)
 

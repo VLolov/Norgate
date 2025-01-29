@@ -37,9 +37,10 @@ class PlotPortfolio(PlotBase):
         report_portfolio = reporting.get_report_portfolio()
         cumulative_df = report_portfolio.cumulative_df
         table_df = report_portfolio.table_df
-        strategy_config = report_portfolio.config
+        cumulative = report_portfolio.cumulative
+        portfolio_dollar = report_portfolio.portfolio_dollar
 
-        self.draw_chart(cumulative_df, strategy_config, table_df)
+        self.draw_chart(cumulative_df, cumulative, portfolio_dollar, table_df)
         daily_returns = cumulative_df['Total'].pct_change().fillna(0)
         # fix error: TypeError: Only valid with DatetimeIndex, TimedeltaIndex or PeriodIndex, but got an instance of 'Index'
         daily_returns.index = pd.to_datetime(daily_returns.index)
@@ -49,13 +50,13 @@ class PlotPortfolio(PlotBase):
             plot_qq_returns(daily_returns, resample_rule='ME')  # 'D', 'ME'
         pass
 
-    def draw_chart(self, cumulative_df, cfg, table_df):
+    def draw_chart(self, cumulative_df, cumulative, portfolio_dollar, table_df):
         # sns.set_style('whitegrid')
 
         title = (
             r'$\bf{' + 'strategy'
-            + (r'\ -\ Cumulative' if cfg.cumulative else '')
-            + (r'\ -\ ' + (', '.join([sector for sector in cfg.sectors])) if cfg.sectors else '')
+            + (r'\ -\ Cumulative' if cumulative else '')
+            + r'\ -\ '
             + r'}$'
         )
 
@@ -72,17 +73,17 @@ class PlotPortfolio(PlotBase):
         # print('Cumulative:')
         # print(tabulate(cumulative_df, headers='keys', tablefmt='psql'))
 
-        log_return = 'log' if cfg.cumulative else 'linear'
+        log_return = 'log' if cumulative else 'linear'
 
         ax['A'].set_yscale(log_return)  # 'log' 'linear'
         ax['A'].plot([cumulative_df.index[0], cumulative_df.index[-1]],  # line beg..end
                      [cumulative_df['Total'].iloc[0], cumulative_df['Total'].iloc[-1]],  # pnl
                      'b', lw=0.5, alpha=0.5)
 
-        if cfg.cumulative:
+        if cumulative:
             dd = cumulative_df['Total'] / cumulative_df['Total'].cummax() - 1
         else:
-            dd = (cumulative_df['Total'] - cumulative_df['Total'].cummax()) / cfg.portfolio_dollar
+            dd = (cumulative_df['Total'] - cumulative_df['Total'].cummax()) / portfolio_dollar
 
         ax['B'].plot(dd * 100, lw=1)
         ax['B'].set_ylabel('DD, %')

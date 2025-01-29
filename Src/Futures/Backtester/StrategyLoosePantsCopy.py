@@ -42,7 +42,7 @@ class StrategyLoosePantsCopy(Strategy):
     def __init__(self, name='LoosePants', config=None):
         super().__init__(name)
         if config is None:
-            self.set_config(StrategyLoosePantsCopy.MyConfig())
+            self.config = StrategyLoosePantsCopy.MyConfig()
 
         self.momentum_lookback: int = 21
         # self.warm_up_period: int = 0
@@ -54,7 +54,7 @@ class StrategyLoosePantsCopy(Strategy):
         for instrument in self.instruments:
             future = typing.cast(Future, instrument)
             df = future.data
-            cfg = self.get_config()
+            cfg = self.config
             df['trailing_stop'] = 0.0
             df['Atr'] = Indicator.atr(df, cfg.atr_period)
             # df['Atr'] = Indicator.std(df, self.atr_period)
@@ -94,7 +94,7 @@ class StrategyLoosePantsCopy(Strategy):
         self.log.debug(f"init({self.idx}, {self.dt})")
 
         # modify parameters of Strategy class
-        cfg = self.get_config()
+        cfg = self.config
         self.cost_contract = cfg.cost_contract
         self.slippage_ticks = cfg.slippage_ticks
         self.close_last_trading_day = cfg.close_last_trading_day
@@ -121,7 +121,7 @@ class StrategyLoosePantsCopy(Strategy):
 
     def calc_nr_contracts(self, instrument: Future, position_dollar, stop_loss_distance):
         contracts = 1.0
-        cfg = self.get_config()
+        cfg = self.config
         if cfg.use_one_contract:
             return contracts
 
@@ -188,7 +188,7 @@ class StrategyLoosePantsCopy(Strategy):
             #     closed_pnl = sum([trade.pnl * self.big_point - trade.costs for trade in broker.trades if trade.is_closed])
             #     curr_account = self.account + closed_pnl
             #     self.dollar_risk = curr_account * self.pct_risk
-            cfg = self.get_config()
+            cfg = self.config
             delay = -cfg.order_execution_delay
 
             if (broker.market_position(self, instrument) <= 0

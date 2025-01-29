@@ -53,13 +53,16 @@ class StrategyBase(Base, ABC):
     def instruments(self) -> List[InstrumentBase]:
         return self._copied_instruments
 
-    def set_config(self, config):
+    @property
+    def config(self):
+        # we assume the child class has a class 'Config'
+        return self._config
+
+    @config.setter
+    def config(self, config):
         assert isinstance(config, ConfigBase), f"Did you pass config class instead of config instance? {config}"
         self._config = config
 
-    def get_config(self):
-        # we assume the child class has a class 'Config'
-        return self._config
 
     @abstractmethod
     def open(self, instrument: InstrumentBase, idx):

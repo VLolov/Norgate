@@ -9,7 +9,7 @@ from Futures.Backtester.BacktesterFutures import *
 class StrategyBuyAndHold(Strategy):
     @dataclass
     class BuyAndHoldConfig(Config):
-        portfolio_dollar: float = 100_000     # 0: get portfolio from Portfolio
+        portfolio_dollar: float = 1_000_000     # 0: get portfolio from Portfolio
         # if use_one_contract = False, buy contracts for price = portfolio_dollar / nr_positions (/ big_point)
         use_one_contract: bool = False
         close_last_trading_day: bool = True
@@ -27,7 +27,7 @@ class StrategyBuyAndHold(Strategy):
     def __init__(self, name='BuyAndHold', config=None):
         super().__init__(name)
         if config is None:
-            self.set_config(self.__class__.BuyAndHoldConfig())
+            self.config = self.__class__.BuyAndHoldConfig()
 
         self.nr_instruments = 0
 
@@ -38,15 +38,10 @@ class StrategyBuyAndHold(Strategy):
         super().init()
 
         # modify parameters of Strategy class
-        cfg = self.get_config()
+        cfg = self.config
         # get initial_capital from portfolio
         if cfg.portfolio_dollar == 0:
             cfg.portfolio_dollar = self.group.backtester.portfolio.initial_capital
-
-        broker = typing.cast(Broker, self.group.broker)
-        broker.setup(initial_capital=cfg.portfolio_dollar,
-                     use_stop_loss=False,
-                     use_stop_orders=False)
 
         self.warm_up_period = 0     # no need to warm-up, we enter on the first tradable date
         self.nr_instruments = len(self.instruments)
@@ -72,10 +67,11 @@ class StrategyBuyAndHold(Strategy):
 
             if broker.market_position(self, instrument) == 0:
                 contracts = 1.0
-                cfg = self.get_config()
+                cfg = self.config
                 if not cfg.use_one_contract:
                     dollar_per_instrument = cfg.portfolio_dollar / self.nr_instruments
-                    contracts = dollar_per_instrument / self.close(instrument, idx) / instrument.metadata.big_point
+                    # contracts = dollar_per_instrument / self.close(instrument, idx) / instrument.metadata.big_point
+                    contracts = dollar_per_instrument / instrument.metadata.margin  # margin = 100% of account
                     # in continuous contracts some closes are < 0, but we want only long, so use abs()
                     contracts = np.abs(contracts)
                     # contracts = np.round(contracts, 0)  # arithmetic round
@@ -86,7 +82,7 @@ class StrategyBuyAndHold(Strategy):
     def last(self):
         self.log.debug(f"last({self.idx}, {self.dt})")
 
-        if self.get_config().close_last_trading_day:
+        if self.config.close_last_trading_day:
             self.close_all_trades()
         broker = typing.cast(Broker, self.group.broker)
         self.log.debug(f"Number of trades: {len(broker.trades)}")

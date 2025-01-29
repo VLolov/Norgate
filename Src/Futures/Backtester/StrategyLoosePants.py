@@ -1,7 +1,7 @@
 import datetime
 import typing
 from copy import deepcopy
-from typing import Optional, Dict, List
+from typing import List
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -30,7 +30,7 @@ class StrategyLoosePants(Strategy):
         atr_multiplier: float = 5.0
         use_stop_loss: bool = True
         use_trailing_stop: bool = True
-        use_stop_orders: bool = True
+
         long: bool = True
         short: bool = True
         use_one_contract: bool = False
@@ -45,7 +45,7 @@ class StrategyLoosePants(Strategy):
     def __init__(self, name='LoosePants', config=None):
         super().__init__(name)
         if config is None:
-            self.set_config(self.__class__.LoosePantsConfig())
+            self.config = self.__class__.LoosePantsConfig()
 
         self.momentum_lookback: int = 21
         # self.warm_up_period: int = 0
@@ -57,7 +57,7 @@ class StrategyLoosePants(Strategy):
         for instrument in self.instruments:
             future = typing.cast(Future, instrument)
             df = future.data
-            cfg = self.get_config()
+            cfg = self.config
             df['trailing_stop'] = 0.0
             df['Atr'] = Indicator.atr(df, cfg.atr_period)
             # df['Atr'] = Indicator.std(df, self.atr_period)
@@ -101,7 +101,7 @@ class StrategyLoosePants(Strategy):
         super().init()
 
         # modify parameters of Strategy class
-        cfg = typing.cast(self.LoosePantsConfig, self.get_config())
+        cfg = typing.cast(self.LoosePantsConfig, self.config)
         self.cost_contract = cfg.cost_contract
         self.slippage_ticks = cfg.slippage_ticks
 
@@ -110,10 +110,7 @@ class StrategyLoosePants(Strategy):
             cfg.portfolio_dollar = self.group.backtester.portfolio.initial_capital
         self.curr_account = cfg.portfolio_dollar
 
-        broker = typing.cast(Broker, self.group.broker)
-        broker.setup(initial_capital=cfg.portfolio_dollar,
-                     use_stop_loss=cfg.use_stop_loss,
-                     use_stop_orders=cfg.use_stop_orders)
+
 
         # self.warm_up_period =max(2, self.period, self.atr_period, self.momentum_lookback)
         self.warm_up_period = max(2, cfg.period, cfg.atr_period, self.momentum_lookback)
@@ -132,7 +129,7 @@ class StrategyLoosePants(Strategy):
 
     def calc_nr_contracts(self, instrument: Future, position_dollar, stop_loss_distance):
         contracts = 1.0
-        cfg = self.get_config()
+        cfg = self.config
         if cfg.use_one_contract:
             return contracts
 
@@ -159,7 +156,7 @@ class StrategyLoosePants(Strategy):
         idx = self.idx
         dt = self.dt
 
-        if dt == datetime.date(1999, 7, 1):
+        if dt.date() == datetime.date(1999, 7, 30):
             jj = 1
 
         # self.log.debug(f"next({idx}, {time})")
@@ -167,7 +164,7 @@ class StrategyLoosePants(Strategy):
         trade_candidates = []
 
         broker = typing.cast(Broker, self.group.broker)
-        cfg = typing.cast(self.LoosePantsConfig, self.get_config())
+        cfg = typing.cast(self.LoosePantsConfig, self.config)
 
         for instrument in self.instruments:
             instrument = typing.cast(Future, instrument)
@@ -185,17 +182,11 @@ class StrategyLoosePants(Strategy):
             # enough_volume = self.volume(instrument, idx) > MIN_VOLUME
             enough_volume = True
 
-            # if self.cumulative:
-            #     # initial account +
-            #     closed_pnl = sum([trade.pnl * self.big_point - trade.costs for trade in broker.trades if trade.is_closed])
-            #     curr_account = self.account + closed_pnl
-            #     self.dollar_risk = curr_account * self.pct_risk
             delay = -cfg.order_execution_delay
 
             mp = broker.market_position(self, instrument)
 
             if mp <= 0 and self.close(instrument, idx - delay) > self.up(instrument, idx - delay - 1):
-                    # and self.close(instrument, idx - delay - 1) < self.up(instrument, idx - delay - 2):
                 # close current short position before going long
                 broker.close_position(self, instrument)
                 if cfg.long:
@@ -203,7 +194,6 @@ class StrategyLoosePants(Strategy):
                                                                 momentum=self._calc_mom(instrument, idx)))
 
             if mp >= 0 and self.close(instrument, idx - delay) < self.down(instrument, idx - delay - 1):
-                    # and self.close(instrument, idx - delay - 1) > self.down(instrument, idx - delay - 2):
                 # go short
                 # close current long position before going short
                 broker.close_position(self, instrument)
@@ -240,7 +230,7 @@ class StrategyLoosePants(Strategy):
             return
 
         idx = self.idx
-        cfg = typing.cast(self.LoosePantsConfig, self.get_config())
+        cfg = typing.cast(self.LoosePantsConfig, self.config)
         broker = typing.cast(Broker, self.group.broker)
         open_trades = broker.open_trades(self)
 
@@ -332,7 +322,8 @@ class StrategyLoosePants(Strategy):
                 stop_loss = self.close_plus_atr(tc.instrument, idx)
                 contracts = -contracts
 
-            broker.open_position(self, tc.instrument,
+            broker.open_position(strategy=self,
+                                 instrument=tc.instrument,
                                  position=contracts,
                                  stop_loss=stop_loss,
                                  margin=tc.instrument.metadata.margin,
@@ -374,7 +365,7 @@ class StrategyLoosePants(Strategy):
     def last(self):
         self.log.debug(f"last({self.idx}, {self.dt})")
 
-        if self.get_config().close_last_trading_day:
+        if self.config.close_last_trading_day:
             self.close_all_trades()
         broker = typing.cast(Broker, self.group.broker)
         self.log.debug(f"Number of trades: {len(broker.trades)}")

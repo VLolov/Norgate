@@ -80,8 +80,12 @@ class Trade(Bb.TradeBase):
         return n
 
     @property
-    def market_position(self):
-        return 1 if self.position > 0 else -1
+    def market_position(self) -> int:
+        if self.position == 0:
+            return 0
+        if self.position > 0:
+            return 1
+        return -1
 
     @classmethod
     def print_trades(cls, trades: List[Bb.TradeBase]):

@@ -44,7 +44,7 @@ class PlotSingle(PlotBase):
         df = instrument.data
 
         # big_point = self.big_point
-        cfg = strategy.get_config()
+        cfg = strategy.config
         
         future_name = (
             f'{instrument}\n'

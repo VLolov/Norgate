@@ -10,36 +10,17 @@ from .Trade import Trade
 class Broker(Bb.BrokerBase):
     def __init__(self):
         super().__init__()
-        self.initial_capital: float = 0.0
         self.use_stop_loss = False
         self.use_stop_orders = False  # stop loss as stop order or on close
 
-        self._trades_selected: Dict[int, List[Trade]] = {}
         self._current_trade: Dict[int, Trade] = {}
 
-    def setup(self, initial_capital, use_stop_loss, use_stop_orders):
-        self.initial_capital = initial_capital
+    def setup(self, use_stop_loss, use_stop_orders):
         self.use_stop_loss = use_stop_loss
         self.use_stop_orders = use_stop_orders
 
     def check_state(self) -> bool:
         return True
-
-    # @staticmethod
-    # @jit(nopython=True)
-    # def _make_key(strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase) -> int:
-    #     return strategy.id * 10000 + instrument.id
-
-    def trades_selected(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase) -> List[Trade]:
-        key = self._make_key(strategy, instrument)
-        return self._trades_selected.get(key, [])
-
-    def add_trade_selected(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase, trade):
-        key = self._make_key(strategy, instrument)
-        arr = self._trades_selected.get(key, [])
-        arr.append(trade)
-        # add also to the common list in BrokerBase
-        self._trades.append(trade)
 
     def get_current_trade(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase):
         key = self._make_key(strategy, instrument)
@@ -48,8 +29,9 @@ class Broker(Bb.BrokerBase):
     def set_current_trade(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase, trade):
         key = self._make_key(strategy, instrument)
         self._current_trade[key] = trade
+        pass
 
-    def delete_current_trade(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase):
+    def delete_current_trade(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase) -> None:
         key = self._make_key(strategy, instrument)
         # Note: throws exception if key does not exist, so we know that something is wrong with our logic
         del self._current_trade[key]
@@ -61,13 +43,13 @@ class Broker(Bb.BrokerBase):
             return 0
         return current_trade.market_position
 
-    def _update_rolls(self, current_trade: Trade):
+    def _update_rolls(self, current_trade: Trade) -> None:
         strategy = current_trade.strategy
         instrument = current_trade.instrument
         if current_trade.position != 0 and strategy.is_roll(instrument, strategy.idx):
             current_trade.rolls += 1
 
-    def _check_stop_loss(self, current_trade: Trade):
+    def _check_stop_loss(self, current_trade: Trade) -> float:
         strategy = current_trade.strategy
         instrument = current_trade.instrument
         idx = strategy.idx
@@ -106,7 +88,8 @@ class Broker(Bb.BrokerBase):
         return stop_loss
 
     def open_position(self,
-                      strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase,
+                      strategy: Bb.StrategyBase,
+                      instrument: Bb.InstrumentBase,
                       position: float = 1,
                       price: float = np.nan,
                       stop_loss: float = np.nan,
@@ -130,14 +113,15 @@ class Broker(Bb.BrokerBase):
                       instrument=instrument,
                       entry_date=entry_date,
                       entry_price=entry_price,
-                      position=position, stop_loss=stop_loss,
+                      position=position,
+                      stop_loss=stop_loss,
                       margin=margin,
                       momentum=momentum)
 
         self.set_current_trade(strategy, instrument, trade)
         trade.margin = margin * abs(position)
 
-        self.add_trade_selected(strategy, instrument, trade)
+        self._trades.append(trade)
         self.update(strategy, instrument, check_stop_loss=False)
 
     def update(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase, check_stop_loss=True) -> bool:
@@ -166,8 +150,12 @@ class Broker(Bb.BrokerBase):
 
         return stop_loss_occurred
 
-    def close_position(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase,
-                       price: float = np.nan, is_stop_loss: bool = False) -> float:
+    def close_position(self,
+                       strategy: Bb.StrategyBase,
+                       instrument: Bb.InstrumentBase,
+                       price: float = np.nan,
+                       is_stop_loss: bool = False) -> float:
+
         current_trade = self.get_current_trade(strategy, instrument)
         if current_trade is None:
             # no position to be closed
@@ -184,7 +172,7 @@ class Broker(Bb.BrokerBase):
 
     @staticmethod
     def _make_key(strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase) -> int:
-        return strategy.id * 10000 + instrument.id
+        return strategy.id * 100000 + instrument.id
 
     def days_since_entry(self, strategy: Bb.StrategyBase, instrument: Bb.InstrumentBase):
         current_trade = self.get_current_trade(strategy, instrument)
@@ -193,7 +181,7 @@ class Broker(Bb.BrokerBase):
         return current_trade.dit
 
     def closed_pnl(self, strategy: Bb.StrategyBase):
-        closed_trades = [typing.cast(Trade, trade) for trade in self._trades
+        closed_trades = [trade for trade in self._trades
                          if trade.strategy == strategy and trade.is_closed]
         pnl = sum([trade.pnl * trade.instrument.metadata.big_point for trade in closed_trades])
         return pnl

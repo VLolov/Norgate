@@ -1,4 +1,3 @@
-import logging
 import typing
 from typing import Optional, Dict, List
 from dataclasses import dataclass
@@ -15,6 +14,7 @@ class ReportSingle(ReportBase):
     def __init__(self, name: str):
         super().__init__(name)
 
+        self._strategies = List[Strategy]
         self._single_reports: Dict[int, ReportSingle.StrategyInstrumentReport] = {}
         self._first_report: Optional[ReportSingle.StrategyInstrumentReport] = None
 
@@ -26,6 +26,7 @@ class ReportSingle(ReportBase):
     def run(self):
         self.log.info(f'Creating single report: "{self.name}"')
         strategies = self.get_strategies()
+        self._strategies = strategies
         for strategy in strategies:
             for instrument in strategy.instruments:
                 strategy = typing.cast(Strategy, strategy)
@@ -86,6 +87,9 @@ class ReportSingle(ReportBase):
 
     def get_all_reports(self) -> List['ReportSingle.StrategyInstrumentReport']:
         return list(self._single_reports.values())
+
+    def get_report_strategies(self):
+        return self._strategies
 
     def calc_performance(self, strategy: Strategy, instrument: Future):
         assert strategy.ready, f"Run strategy {strategy.name} first"
@@ -163,7 +167,7 @@ class ReportSingle(ReportBase):
 
         # calculate yearly performance, no compounding
         total_days = (df.index[-1] - df.index[0]).days  # total calendar years
-        report.yearly_ret = report.final_pnl / (total_days / 365.25) / broker.initial_capital
+        report.yearly_ret = report.final_pnl / (total_days / 365.25) / strategy.config.portfolio_dollar
         std = df['Strat_Returns'].std()
         if std > 0:
             report.sharpe = df['Strat_Returns'].mean() / df['Strat_Returns'].std() * np.sqrt(252)

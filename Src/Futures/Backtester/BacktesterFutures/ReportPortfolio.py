@@ -1,6 +1,5 @@
-import logging
 import typing
-from typing import Optional, Dict, List
+from typing import Optional, List
 from dataclasses import dataclass
 
 import numpy as np
@@ -22,9 +21,11 @@ DATA_DIRS = []  # don't save result in files
 class ReportPortfolio(ReportBase):
     @dataclass
     class ReportPortfolioResult:
-        cumulative_df: Optional[pd.DataFrame] = None
-        table_df: Optional[pd.DataFrame] = None
-        config: Optional[Config] = None
+        cumulative_df: pd.DataFrame
+        table_df: pd.DataFrame
+        strategies: List[Strategy]
+        cumulative: bool
+        portfolio_dollar: float
 
     def __init__(self, name: str, verbose=True):
         super().__init__(name)
@@ -36,7 +37,10 @@ class ReportPortfolio(ReportBase):
         # results:
         self._report_portfolio: Optional[ReportPortfolio.ReportPortfolioResult] = None
 
-        self._strategy_config = None
+        self._strategies = []
+        self._cumulative = False
+        self._portfolio_dollar = 0
+
         self.ready = False
 
     def check_state(self) -> bool:
@@ -56,26 +60,32 @@ class ReportPortfolio(ReportBase):
         reports = self._report_single.get_all_reports()
         assert reports and len(reports) > 0, "No single reports"
 
-        self._strategy_config = self.extract_strategy_config(reports)
+        self._strategies = self._report_single.get_report_strategies()
+
+        for report in reports:
+            required_attributes = [
+                'cumulative', 'portfolio_dollar', 'risk_position',
+                'risk_all_positions', 'max_positions_per_sector', 'max_margin',
+                'atr_multiplier', 'period'
+            ]
+            report.strategy.config.check_attributes(required_attributes)
+
+        cumulatives = [strategy.config.cumulative for strategy in self._strategies]
+        assert all(c == cumulatives[0] for c in cumulatives), \
+            "All config.cumulative flags of all strategies must be equal"
+        self._cumulative = cumulatives[0]
+
 
         df, statistics = self.combined_result(reports)
         table = self.calc_table(df, statistics)
         self._report_portfolio = ReportPortfolio.ReportPortfolioResult(cumulative_df=df,
                                                                        table_df=table,
-                                                                       config=self._strategy_config)
+                                                                       strategies=self._strategies,
+                                                                       cumulative=self._cumulative,
+                                                                       portfolio_dollar=self._portfolio_dollar)
         self.save_pnl(df)
         self.ready = True
 
-    @staticmethod
-    def extract_strategy_config(reports):
-        strategy_config = typing.cast(Config, reports[0].strategy.get_config())
-        required_attributes = [
-            'cumulative', 'portfolio_dollar', 'risk_position',
-            'risk_all_positions', 'max_positions_per_sector', 'max_margin',
-            'atr_multiplier', 'period'
-        ]
-        strategy_config.check_attributes(required_attributes)
-        return strategy_config
 
     def combined_result(self, reports: List[ReportSingle.StrategyInstrumentReport]) \
             -> typing.Tuple[pd.DataFrame, 'ReportPortfolio.Statistics']:
@@ -144,6 +154,7 @@ class ReportPortfolio(ReportBase):
             metadata = instrument.metadata
             summary_row = {
                 'idx': idx,
+                'strategy': report.strategy.name,
                 'symbol': instrument.symbol,
                 'future.name': metadata.name,
                 'sector': metadata.sector,
@@ -237,18 +248,22 @@ class ReportPortfolio(ReportBase):
         return cumulative_df, stat
 
     def calc_table(self, cumulative_df, stat):
-        cfg = self._strategy_config
-        if cfg.cumulative:
+        cumulative = self._cumulative
+
+        portfolio_dollar = np.sum([strategy.config.portfolio_dollar for strategy in self._strategies])
+        self._portfolio_dollar = portfolio_dollar
+
+        if cumulative:
             # don't accumulate again !!!
             # for col in ['Total', 'Total_Long', 'Total_Short']:
             #     pct_change = cumulative_df[col].pct_change().fillna(0)
             #     cumulative_df[col] = ((1 + pct_change).cumprod()) * cumulative_df[col]
 
             # yearly_agr = PlotPerformance.cagr(cumulative_df['Total'], compounding=cfg.cumulative)
-            yearly_agr = self.Calc.cagr(cumulative_df['Total'], compounding=cfg.cumulative)
+            yearly_agr = self.Calc.cagr(cumulative_df['Total'], compounding=cumulative)
             ret_string = 'CAGR'
         else:
-            yearly_agr = self.Calc.calc_avg_dollar(cumulative_df['Total'], cfg.portfolio_dollar)
+            yearly_agr = self.Calc.calc_avg_dollar(cumulative_df['Total'], portfolio_dollar)
             ret_string = 'Pct./year'
 
         sharpe = self.Calc.calc_sharpe(cumulative_df['Total'])
@@ -257,10 +272,10 @@ class ReportPortfolio(ReportBase):
         trades_per_year, rolls_per_year, years = self.Calc.calc_trades_per_year(cumulative_df, stat.number_trades,
                                                                                 stat.number_rolls)
 
-        if cfg.cumulative:
+        if cumulative:
             dd = cumulative_df['Total'] / cumulative_df['Total'].cummax() - 1
         else:
-            dd = (cumulative_df['Total'] - cumulative_df['Total'].cummax()) / cfg.portfolio_dollar
+            dd = (cumulative_df['Total'] - cumulative_df['Total'].cummax()) / portfolio_dollar
 
         max_dd = dd.min()
         dd_duration_months = self.Calc.calc_max_dd_duration(dd) / 21
@@ -270,18 +285,25 @@ class ReportPortfolio(ReportBase):
         # assert np.isclose(total_return, stat.total_return, atol=10), \
         #     f"Should be almost equal - total_return: {total_return} and stat: {stat.total_return}"
 
-        cfg = self._strategy_config
+        risk_position = np.average([strategy.config.risk_position for strategy in self._strategies])
+        risk_all_positions = np.sum([strategy.config.risk_all_positions for strategy in self._strategies])
+        max_positions_per_sector = np.sum([strategy.config.max_positions_per_sector for strategy in self._strategies])
+        max_margin = np.sum([strategy.config.max_margin for strategy in self._strategies])
+        atr_multiplier = np.average([strategy.config.atr_multiplier for strategy in self._strategies
+                                     if strategy.config.atr_multiplier > 0])
+        period = np.average([strategy.config.period for strategy in self._strategies
+                             if strategy.config.period > 0])
 
         data = {
-            'position risk%': f'{cfg.risk_position * 100:.2f} %',
-            'position risk$': f'$ {self.Calc.position_size_dollar(cfg):,.0f}',
-            'total risk': f'{cfg.risk_all_positions * 100:.2f} %',
-            'acc.size': f'$ {cfg.portfolio_dollar:,.0f}',
-            'max.positions': f'{self.Calc.max_positions(cfg)}',
-            'max.per.sector': f'{cfg.max_positions_per_sector}',
-            'max.margin': f'{cfg.max_margin}',
-            'atr.multiplier': f'{cfg.atr_multiplier}',
-            'lookback': f'{cfg.period}',
+            'position risk%': f'{risk_position * 100:.2f} %',
+            'position risk$': f'$ {self.Calc.position_size_dollar(portfolio_dollar, risk_position):,.0f}',
+            'total risk': f'{risk_all_positions * 100:.2f} %',
+            'acc.size': f'$ {portfolio_dollar:,.0f}',
+            'max.positions': f'{self.Calc.max_positions(risk_position, risk_all_positions)}',
+            'max.per.sector': f'{max_positions_per_sector}',
+            'max.margin': f'{max_margin * 100:.2f} %',
+            'atr.multiplier': f'{atr_multiplier}',
+            'lookback': f'{period}',
             'years': f'{years:.1f}',
             'nr.trades': f'{stat.number_trades}',
             'trades/year': f'{trades_per_year:.1f}',
@@ -326,7 +348,8 @@ class ReportPortfolio(ReportBase):
         print(f'Data saved to "{filename}"')
 
     def save_pnl(self, df):
-        if self._strategy_config.cumulative:
+        if self._strategies[0].config.cumulative:
+            # cumulative flags of all strategies are equal
             self.log.info('Cannot save results from CUMULATIVE backtest')
             return
         if not DATA_DIRS:
@@ -441,12 +464,12 @@ class ReportPortfolio(ReportBase):
             return total_trades / years, total_rolls / years, years
 
         @classmethod
-        def position_size_dollar(cls, config):
-            return config.portfolio_dollar * config.risk_position
+        def position_size_dollar(cls, portfolio_dollar, risk_position):
+            return portfolio_dollar * risk_position
 
         @classmethod
-        def max_positions(cls, config) -> int:
-            if config.risk_all_positions <= 0:
+        def max_positions(cls, risk_position, risk_all_positions) -> int:
+            if risk_all_positions <= 0:
                 return 0
-            return int(np.floor(1.0 / abs(config.risk_position) * config.risk_all_positions))
+            return int(np.floor(1.0 / np.abs(risk_position) * risk_all_positions))
             # return 10
