@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import typing
-from abc import ABC, abstractmethod
-from copy import deepcopy
 from typing import Optional, List, TYPE_CHECKING
+from abc import ABC, abstractmethod
 
 import pandas as pd
 
@@ -32,10 +30,6 @@ class StrategyBase(Base, ABC):
         self._config: Optional[ConfigBase] = None     # the type is not defined, so we can use different config classes
         self._copied_instruments: List[InstrumentBase] = []
 
-    @abstractmethod
-    def init(self):
-        self._copied_instruments = deepcopy(self.group.instruments)
-
     def __repr__(self):
         return (f"<{self.__class__.__name__} id: {self.id}, "
                 f"name: {self.name}, "
@@ -63,7 +57,6 @@ class StrategyBase(Base, ABC):
         assert isinstance(config, ConfigBase), f"Did you pass config class instead of config instance? {config}"
         self._config = config
 
-
     @abstractmethod
     def open(self, instrument: InstrumentBase, idx):
         ...
@@ -86,6 +79,10 @@ class StrategyBase(Base, ABC):
 
     @abstractmethod
     def timestamp(self, instrument, idx):
+        ...
+
+    @abstractmethod
+    def init(self):
         ...
 
     @abstractmethod

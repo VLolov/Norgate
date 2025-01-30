@@ -75,7 +75,7 @@ class Config:
     #         self.ATR_MUL = 3 !
     #         self.PERIOD = 12 * 21 or 6 * 21
 
-    PORTFOLIO_DOLLAR = 100_000
+    PORTFOLIO_DOLLAR = 1000_000
     RISK_POSITION = 0.02        # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
     RISK_ALL_POSITIONS = 0.2    # % of portfolio; 0=don't check
     MAX_MARGIN = 0.4            # % of portfolio; 0=don't check margin
@@ -84,7 +84,7 @@ class Config:
     START_DATE = '1980-01-01'   # start of data: '1970-01-01' (1980-01-01)
     END_DATE = '3015-04-01'
     USE_STOP_LOSS = True
-    CUMULATIVE = True
+    CUMULATIVE = False
     PATCH_MICRO = False
     MULTI_PROCESSING = True
     SECTOR = ''
@@ -104,6 +104,7 @@ sectors = ['Crypto', 'Currency', 'Energy', 'Volatility', 'Equity',
 # with skip: better sharp, higher return, but higher DD
 # skip shorts is important if a restricted list like tradable_symbols_1000 is used (29.11.2024)
 skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
+skip_short = []
 
 skip_long = []
 # skip_long = ['Volatility']

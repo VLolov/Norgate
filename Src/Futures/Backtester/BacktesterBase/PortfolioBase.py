@@ -22,7 +22,7 @@ class PortfolioBase(Base, ABC):
 
     def set_initial_capital(self, initial_capital: float):
         self.initial_capital = initial_capital
-        self.log.warning(f"Setting initial capital: {initial_capital}")
+        # self.log.info(f"Setting initial capital: {initial_capital}")
         return self
 
     def set_backtester(self, backtester: BacktesterBase):

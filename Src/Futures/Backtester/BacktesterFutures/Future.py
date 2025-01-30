@@ -14,11 +14,6 @@ from Futures.TrendFollowing.LoosePants import LoosePants
 
 
 class Future(InstrumentBase):
-    OPEN = -1
-    HIGH = -1
-    LOW = -1
-    CLOSE = -1
-
     def check_state(self) -> bool:
         return True
 
@@ -44,6 +39,8 @@ class Future(InstrumentBase):
         self.HIGH = cols.index('High')
         self.LOW = cols.index('Low')
         self.CLOSE = cols.index('Close')
+        self.VOLUME = cols.index('Volume')
+        # numpy access:
 
     def dates(self) -> List[datetime]:
         return [datetime.fromtimestamp(ts) for ts in self.data.index]
@@ -64,7 +61,7 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
                              'SCN', 'SI', 'SR3', 'TN', 'UB', 'VX', 'YM', 'ZC', 'ZF', 'ZL', 'ZN', 'ZO', 'ZQ', 'ZR', 'ZS',
                              'ZT', 'ZW']
 
-    futures = NorgateFuture.all_futures_norgate(use_micro=False)
+    futures = NorgateFuture.all_futures_norgate(use_micro=True)
     futures_new = []
     min_date = pd.Timestamp.max
     max_date = pd.Timestamp.min
@@ -142,8 +139,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
         # IMPORTANT: replace future data of original Future, but leave first/last date unchanged !!!
         future.data = future_data
         # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
-        # future.data_numpy = future.data.to_numpy()
         future.data.index = pd.to_datetime(future.data.index)      # restore datetime index
+        future.data_numpy = future.data.to_numpy()
 
     return futures_new
 

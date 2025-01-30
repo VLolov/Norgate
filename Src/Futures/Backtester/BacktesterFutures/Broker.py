@@ -18,6 +18,7 @@ class Broker(Bb.BrokerBase):
     def setup(self, use_stop_loss, use_stop_orders):
         self.use_stop_loss = use_stop_loss
         self.use_stop_orders = use_stop_orders
+        return self
 
     def check_state(self) -> bool:
         return True

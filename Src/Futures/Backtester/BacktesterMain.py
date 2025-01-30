@@ -15,42 +15,39 @@ def main():
     # logging.basicConfig(level=logging.DEBUG)
     bt = Backtester()
 
-    p = Portfolio()
+    p = Portfolio().set_initial_capital(100_000).set_backtester(bt)
     bt.set_portfolio(p)
-    p.set_initial_capital(100_000).set_backtester(bt)
 
-    group = Group("First Group")
-    group.add_backtester(bt)
+    group = Group("First Group").add_backtester(bt)
     bt.add_group(group)
 
-    broker = Broker()
-    broker.set_group(group)
+    broker = Broker().set_group(group).setup(use_stop_loss=True, use_stop_orders=True)
     group.set_broker(broker)
-    broker.setup(use_stop_loss=True, use_stop_orders=True)
 
-    report_single = ReportSingle("Single Report")
-    report_single.set_backtester(bt)
+    report_single = ReportSingle("Single Report").set_backtester(bt)
     bt.add_report(report_single)
 
     # plot_single = PlotSingle("My Single Plot").set_report(report_single)
     # report_single.add_plot(plot_single)
 
-    report_multi = ReportPortfolio("Portfolio Report", verbose=True).set_backtester(bt)
-    report_multi.set_report_single(report_single)
+    report_multi = ReportPortfolio("Portfolio Report", verbose=True) \
+        .set_backtester(bt) \
+        .set_report_single(report_single)
     bt.add_report(report_multi)
-    plot_multi = PlotPortfolio("Portfolio Plot", plot_histogram=False, plot_qq=False)
-    plot_multi.set_report(report_multi)
+
+    plot_multi = PlotPortfolio("Portfolio Plot", plot_histogram=False, plot_qq=False) \
+        .set_report(report_multi)
     report_multi.add_plot(plot_multi)
 
     # for strategy_class in [StrategyBuyAndHold]:
-    # for strategy_class in [StrategyLoosePants]:
-    for strategy_class in [StrategyLoosePants, StrategyBuyAndHold]:
+    for strategy_class in [StrategyLoosePants]:
+    # for strategy_class in [StrategyLoosePants, StrategyBuyAndHold]:
         strategy = strategy_class()
         group.add_strategies(strategy)
         strategy.set_group(group)
 
-    selected_symbols = ['GC', 'CL', 'ES']
-    # selected_symbols = []
+    selected_symbols = ['ZN', 'ES']
+    selected_symbols = []
     futures = get_futures(start_date='1980-01-01', end_date='3024-03-20', selected_symbols=selected_symbols)
     group.add_instruments(futures)
 

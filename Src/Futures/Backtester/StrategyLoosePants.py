@@ -11,13 +11,13 @@ from Futures.TrendFollowing.Indicator import Indicator
 
 
 skip_short = ['Equity', 'Metal', 'Fixed Income', 'Grain', 'Soft']
-skip_short = []
+# skip_short = []
 
 
 class StrategyLoosePants(Strategy):
     @dataclass
     class LoosePantsConfig(Config):
-        portfolio_dollar: float = 1_000_000     # 0: get portfolio from Portfolio
+        portfolio_dollar: float = 100_000     # 0: get portfolio from Portfolio
         risk_position: float = 0.02  # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
         risk_all_positions: float = 0.2  # % of portfolio; 0=don't check
         max_margin: float = 0.4  # % of portfolio; 0=don't check margin
@@ -34,9 +34,9 @@ class StrategyLoosePants(Strategy):
         long: bool = True
         short: bool = True
         use_one_contract: bool = False
-        cost_contract: float = 0    ############ 2  # USD to trade one contract, single side
-        slippage_ticks: float = 0   ############# 2  # single side slippage, use TickSize to convert to USD
-        cumulative: bool = False  # if cumulative=True, position size is calculated based on pct_risk and account size
+        cost_contract: float = 2.0  # USD to trade one contract, single side
+        slippage_ticks: float = 2  # single side slippage, use TickSize to convert to USD
+        cumulative: bool = True  # if cumulative=True, position size is calculated based on pct_risk and account size
         order_execution_delay: int = 0
         close_last_trading_day: bool = True
 
@@ -123,9 +123,6 @@ class StrategyLoosePants(Strategy):
     #     # return instrument.data.iloc[idx]['Open']
     #     return instrument.data['Close'].iloc[idx]        # this is much faster (3-4 times)
     #
-    # @staticmethod
-    # def get_close_numpy(instrument, idx):
-    #     return instrument.data_numpy[idx, Future.CLOSE]
 
     def calc_nr_contracts(self, instrument: Future, position_dollar, stop_loss_distance):
         contracts = 1.0
@@ -152,7 +149,8 @@ class StrategyLoosePants(Strategy):
         deleted: bool = False
 
     def next(self):
-        # all this code is for testing only
+        super().next()
+
         idx = self.idx
         dt = self.dt
 
@@ -363,6 +361,8 @@ class StrategyLoosePants(Strategy):
         return instrument.data['ClosePlusATR'].iloc[idx]
 
     def last(self):
+        super().last()
+        
         self.log.debug(f"last({self.idx}, {self.dt})")
 
         if self.config.close_last_trading_day:

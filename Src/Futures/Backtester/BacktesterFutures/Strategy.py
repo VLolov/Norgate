@@ -1,5 +1,6 @@
 import typing
-from abc import ABC
+from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import List
 import pandas as pd
 
@@ -14,24 +15,14 @@ class Strategy(Bb.StrategyBase, ABC):
         self.warm_up_period = -1
         self.close_last_trading_day = True
 
-    # def init(self):
-    #     self.log.debug(f"init({self.idx}, {self.time})")
-    #
-    # def next(self):
-    #     self.log.debug(f"next({self.idx}, {self.time})")
-    #
-    # def last(self):
-    #     self.log.debug(f"last({self.idx}, {self.time})")
-
     def check_state(self) -> bool:
         return self.group is not None
 
-    @staticmethod
-    def get_value(instrument, column_name: str | List[str], idx):
-        return instrument.data[column_name].iloc[idx]
-
-    def set_value(self, instrument: Bb.InstrumentBase, column_name: str, value, idx):
-        instrument.data.loc[self.timestamp(instrument, idx), column_name] = value
+    @abstractmethod
+    def init(self):
+        # this is needed because we add columns to instrument.data, so multiple strategies on the
+        # same instrument have to work on instrument copy
+        self._copied_instruments = deepcopy(self.group.instruments)
 
     def open(self, instrument, idx) -> float:
         return instrument.data['Open'].iloc[idx]
@@ -48,9 +39,31 @@ class Strategy(Bb.StrategyBase, ABC):
 
     def volume(self, instrument, idx) -> float:
         return instrument.data['Volume'][idx]
+    #
+    # def open(self, instrument, idx) -> float:
+    #     return instrument.data_numpy[idx, instrument.OPEN]
+    #
+    # def high(self, instrument, idx) -> float:
+    #     return instrument.data_numpy[idx, instrument.HIGH]
+    #
+    # def low(self, instrument, idx) -> float:
+    #     return instrument.data_numpy[idx, instrument.LOW]
+    #
+    # def close(self, instrument, idx) -> float:
+    #     return instrument.data_numpy[idx, instrument.CLOSE]
+    #
+    # def volume(self, instrument, idx) -> float:
+    #     return instrument.data_numpy[idx, instrument.VOLUME]
 
     def timestamp(self, instrument, idx) -> pd.Timestamp:
         return instrument.data.index[idx]
+
+    @staticmethod
+    def get_value(instrument, column_name: str | List[str], idx):
+        return instrument.data[column_name].iloc[idx]
+
+    def set_value(self, instrument: Bb.InstrumentBase, column_name: str, value, idx):
+        instrument.data.loc[self.timestamp(instrument, idx), column_name] = value
 
     def is_roll(self, instrument, idx):
         if 'DTE' in instrument.data.columns:

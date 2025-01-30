@@ -48,6 +48,7 @@ class ReportPortfolio(ReportBase):
 
     def set_report_single(self, report_single):
         self._report_single = report_single
+        return self
 
     def get_report_portfolio(self):
         return self._report_portfolio
@@ -289,10 +290,8 @@ class ReportPortfolio(ReportBase):
         risk_all_positions = np.sum([strategy.config.risk_all_positions for strategy in self._strategies])
         max_positions_per_sector = np.sum([strategy.config.max_positions_per_sector for strategy in self._strategies])
         max_margin = np.sum([strategy.config.max_margin for strategy in self._strategies])
-        atr_multiplier = np.average([strategy.config.atr_multiplier for strategy in self._strategies
-                                     if strategy.config.atr_multiplier > 0])
-        period = np.average([strategy.config.period for strategy in self._strategies
-                             if strategy.config.period > 0])
+        atr_multiplier = np.average([strategy.config.atr_multiplier for strategy in self._strategies])
+        period = np.average([strategy.config.period for strategy in self._strategies])
 
         data = {
             'position risk%': f'{risk_position * 100:.2f} %',

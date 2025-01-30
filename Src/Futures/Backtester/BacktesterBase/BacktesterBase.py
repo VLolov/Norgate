@@ -27,6 +27,7 @@ class BacktesterBase(Base, ABC):
                 f"portfolio id: {self.id_string(self.portfolio)}, "
                 f"groups count: {len(self.groups)}, "
                 f"reports count: {len(self.reports)}>")
+
     @abstractmethod
     def run(self):
         ...
