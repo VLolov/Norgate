@@ -5,8 +5,10 @@ from typing import List
 import pandas as pd
 
 import Futures.Backtester.BacktesterBase as Bb
-from Futures.Backtester.BacktesterFutures import Broker
-from Futures.Backtester.BacktesterFutures import Future
+# from Futures.Backtester.BacktesterFutures import Broker
+# from Futures.Backtester.BacktesterFutures import Future
+from .Broker import Broker
+from .Future import Future
 
 
 class Strategy(Bb.StrategyBase, ABC):

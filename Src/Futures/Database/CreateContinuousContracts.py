@@ -471,13 +471,13 @@ def show_available_expirations():
 if __name__ == "__main__":
     matplotlib.use("QtAgg")
 
-    # raise Exception("Database protection")
+    raise Exception("Database protection")
 
     with Timer():
-        # calculate_continuous_store_db()   # !!! Write in Database !!!
+        calculate_continuous_store_db()   # !!! Write in Database !!!
 
         # show_available_expirations()
         #     symbols = ['RB']    # , 'ZS' 'ES', '6E', 'CL', 'GC', 'NG']
 
-        plot_continuous(['CC'], max_front=99)
+        # plot_continuous(['CC'], max_front=99)
 

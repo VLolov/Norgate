@@ -7,6 +7,13 @@ import Futures.Backtester.BacktesterBase as Bb
 from .Trade import Trade
 
 
+def _update_rolls(current_trade: Trade) -> None:
+    strategy = current_trade.strategy
+    instrument = current_trade.instrument
+    if current_trade.position != 0 and strategy.is_roll(instrument, strategy.idx):
+        current_trade.rolls += 1
+
+
 class Broker(Bb.BrokerBase):
     def __init__(self):
         super().__init__()
@@ -44,13 +51,8 @@ class Broker(Bb.BrokerBase):
             return 0
         return current_trade.market_position
 
-    def _update_rolls(self, current_trade: Trade) -> None:
-        strategy = current_trade.strategy
-        instrument = current_trade.instrument
-        if current_trade.position != 0 and strategy.is_roll(instrument, strategy.idx):
-            current_trade.rolls += 1
-
     def _check_stop_loss(self, current_trade: Trade) -> float:
+        # return stop_level != np.nan if stop loss occurred (else return np.nan)
         strategy = current_trade.strategy
         instrument = current_trade.instrument
         idx = strategy.idx
@@ -147,7 +149,7 @@ class Broker(Bb.BrokerBase):
                     stop_loss_occurred = True
 
             if not stop_loss_occurred:
-                self._update_rolls(current_trade)
+                _update_rolls(current_trade)
 
         return stop_loss_occurred
 

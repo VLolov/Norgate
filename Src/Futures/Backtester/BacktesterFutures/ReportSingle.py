@@ -7,8 +7,11 @@ import pandas as pd
 from tabulate import tabulate
 
 from Futures.Backtester.BacktesterBase import ReportBase
-from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker
-
+# from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker
+from .Strategy import Strategy
+from .Future import Future
+from .Trade import Trade
+from .Broker import Broker
 
 class ReportSingle(ReportBase):
     def __init__(self, name: str):

@@ -7,7 +7,12 @@ import pandas as pd
 from tabulate import tabulate
 
 from Futures.Backtester.BacktesterBase import ReportBase, InstrumentBase
-from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker, ReportSingle, Config
+# from Futures.Backtester.BacktesterFutures import Strategy, Future, Trade, Broker, ReportSingle, Config
+from .Strategy import Strategy
+from .Future import Future
+from .Trade import Trade
+from .ReportSingle import ReportSingle
+
 
 DATA_DIRS = [
     'C:/Users/info/Documents/Python/MachineLearning/Src/Tradestation/data',
@@ -216,7 +221,7 @@ class ReportPortfolio(ReportBase):
                 costs = trades_summary_df['costs'].sum()
                 trades_summary_df.reset_index(drop=True, inplace=True)
                 # trades_summary_df.sort_values(by='entry_date', inplace=True)
-                self.log.info('\n' + tabulate(trades_summary_df.sort_values(by='entry_date'), headers='keys', tablefmt='psql'))
+                self.log.info('\n' + tabulate(trades_summary_df.sort_values(by='exit_date'), headers='keys', tablefmt='psql'))
                 self.log.info(f'Trades, total {total:,.0f}, av.trade={avg:,.0f}, costs={costs:,.0f}')
 
             summary_df = pd.DataFrame(summary_rows)

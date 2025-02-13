@@ -20,7 +20,7 @@ class StrategyLoosePants(Strategy):
         portfolio_dollar: float = 100_000     # 0: get portfolio from Portfolio
         risk_position: float = 0.02  # % of portfolio, if RISK_POSITION < 0: trade with +/- 1 contract
         risk_all_positions: float = 0.2  # % of portfolio; 0=don't check
-        max_margin: float = 0.4  # % of portfolio; 0=don't check margin
+        max_margin: float = 0.5  # % of portfolio; 0=don't check margin
 
         sectors: List[str] = field(default_factory=lambda: [])   # filter by sectors
         max_positions_per_sector: int = 0
@@ -36,7 +36,7 @@ class StrategyLoosePants(Strategy):
         use_one_contract: bool = False
         cost_contract: float = 2.0  # USD to trade one contract, single side
         slippage_ticks: float = 2  # single side slippage, use TickSize to convert to USD
-        cumulative: bool = True  # if cumulative=True, position size is calculated based on pct_risk and account size
+        cumulative: bool = False  # if cumulative=True, position size is calculated based on pct_risk and account size
         order_execution_delay: int = 0
         close_last_trading_day: bool = True
 

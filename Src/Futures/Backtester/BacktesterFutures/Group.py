@@ -3,7 +3,7 @@ import typing
 from tqdm import tqdm
 
 import Futures.Backtester.BacktesterBase as Bb
-from Futures.Backtester.BacktesterFutures import Strategy
+from .Strategy import Strategy
 
 
 class Group(Bb.GroupBase):

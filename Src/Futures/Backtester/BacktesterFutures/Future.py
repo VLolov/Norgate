@@ -10,7 +10,7 @@ from Futures.DBConfig import DBConfig
 from Futures.Backtester.BacktesterBase import InstrumentBase
 from Futures.TrendFollowing.DataAccess import DataAccess
 from Futures.TrendFollowing.Future import Future as NorgateFuture
-from Futures.TrendFollowing.LoosePants import LoosePants
+# from Futures.TrendFollowing.LoosePants import LoosePants
 
 
 class Future(InstrumentBase):
@@ -53,7 +53,7 @@ class Future(InstrumentBase):
                 f"data_len: {len(self.data)}>")
 
 
-def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols:List[str]=[]) -> List[Future]:
+def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols: List[str] = []) -> List[Future]:
     tradable_symbols_1000 = ['6A', '6B', '6C', '6E', '6J', '6M', 'BTC', 'CC', 'CL', 'CT', 'DC', 'DX',
                              'EMD', 'ES', 'ETH', 'FCE', 'FDAX', 'FESX', 'FGBL', 'FGBM', 'FGBS', 'FOAT', 'FTDX',
                              'GC', 'HE', 'HG', 'HTW', 'KE', 'LEU', 'LRC', 'LSU', 'NG', 'NKD', 'NQ', 'RTY', 'SB',
@@ -77,7 +77,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
 
             # database operation
             data_access = DataAccess(connection, start_date, end_date)
-            data = LoosePants.get_data(data_access, future, front=front)
+            # data = LoosePants.get_data(data_access, future, front=front)
+            data = data_access.continuous_contract_adjusted(future.symbol, front=front)
             # remove duckdb connection, as it cannot be pickled
             future.dta = None
 
@@ -141,6 +142,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
         # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
         future.data.index = pd.to_datetime(future.data.index)      # restore datetime index
         future.data_numpy = future.data.to_numpy()
+
+        # use df.index = df.index.tz_localize(None) ???
 
     return futures_new
 

@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from Futures.Backtester.BacktesterBase import PlotBase
-from Futures.Backtester.BacktesterFutures import ReportSingle
-from Futures.Backtester.BacktesterFutures import Trade
+from .ReportSingle import ReportSingle
+from .Trade import Trade
 
 matplotlib.use("Qt5Agg")
 
