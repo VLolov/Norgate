@@ -99,12 +99,6 @@ class StrategyLoosePantsCopy(Strategy):
         self.slippage_ticks = cfg.slippage_ticks
         self.close_last_trading_day = cfg.close_last_trading_day
 
-        broker = typing.cast(Broker, self.group.broker)
-        broker.setup(initial_capital=cfg.account,
-                     use_stop_loss=cfg.use_stop_loss,
-                     use_stop_orders=cfg.use_stop_orders)
-
-        # self.warm_up_period =max(2, self.period, self.atr_period, self.momentum_lookback)
         self.warm_up_period = max(2, cfg.period, cfg.atr_period, self.momentum_lookback)
 
         self.set_tradable_range_instruments()
@@ -114,10 +108,6 @@ class StrategyLoosePantsCopy(Strategy):
     def get_close(instrument, idx):
         # return instrument.data.iloc[idx]['Open']
         return instrument.data['Close'].iloc[idx]        # this is much faster (3-4 times)
-
-    @staticmethod
-    def get_close_numpy(instrument, idx):
-        return instrument.data_numpy[idx, Future.CLOSE]
 
     def calc_nr_contracts(self, instrument: Future, position_dollar, stop_loss_distance):
         contracts = 1.0
@@ -156,38 +146,9 @@ class StrategyLoosePantsCopy(Strategy):
                 # stop loss occurred, don't try to enter on the same bar
                 continue
 
-            # for i in range(10):
-            #     symbol = future.symbol
-            #     open = self.open(future, idx)
-            #     high = self.high(future, idx)
-            #     low = self.low(future, idx)
-            #     close = self.close(future, idx)
-
-            # for i in range(10):
-            #     symbol = future.symbol
-            #     # open1, high1, low1, close1 = self.ohlc(future, idx)
-            #     # close = self.get_close(future, idx)
-            #     # close = self.get_close(future, idx)
-            #     # close = self.get_close(future, idx)
-            #     # close = self.get_close(future, idx)
-            #     # assert self.get_close(future, idx) == self.get_close_numpy(future, idx)
-            #     close1 = self.get_close_numpy(future, idx)
-            #     close1 = self.get_close_numpy(future, idx)
-            #     close1 = self.get_close_numpy(future, idx)
-            #     close1 = self.get_close_numpy(future, idx)
-
-            # buy and hold
-            # if broker.market_position(self, future) == 0:
-            #    broker.open_position(self, future, margin=future.metadata.margin)
-
             # enough_volume = self.volume(instrument, idx) > MIN_VOLUME
             enough_volume = True
 
-            # if self.cumulative:
-            #     # initial account +
-            #     closed_pnl = sum([trade.pnl * self.big_point - trade.costs for trade in broker.trades if trade.is_closed])
-            #     curr_account = self.account + closed_pnl
-            #     self.dollar_risk = curr_account * self.pct_risk
             cfg = self.config
             delay = -cfg.order_execution_delay
 

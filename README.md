@@ -1,3 +1,10 @@
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+em { color: blue }
+</style>
+
 # Use Norgate Data to Create Backtests with Equities and Futures
 
 `20.09.2024`
@@ -10,7 +17,7 @@
 ## Starting with implementation of Backtester
 
 `30.01.2025`
-## Backtester with multiple strategies and instruments implemented
+## Backtester with multiple _strategies_ and <g>instruments</g> implemented
 
 
 

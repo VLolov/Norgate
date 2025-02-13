@@ -4,6 +4,7 @@ from typing import List
 
 import duckdb
 import pandas as pd
+from tabulate import tabulate
 from tqdm import tqdm
 
 from Futures.DBConfig import DBConfig
@@ -33,14 +34,18 @@ class Future(InstrumentBase):
         self.metadata: Future.MetaData = metadata
         self.first_date = data.index[0]
         self.last_date = data.index[-1]
-        self.data_numpy = None
-        cols = self.data.columns.values.tolist()
-        self.OPEN = cols.index('Open')
-        self.HIGH = cols.index('High')
-        self.LOW = cols.index('Low')
-        self.CLOSE = cols.index('Close')
-        self.VOLUME = cols.index('Volume')
-        # numpy access:
+
+        # # # numpy access,
+        # # IMPORTANT: the following part decreases speed dramatically (x 2.5)!!!
+        # #            I don't know why, we don't use data_numpy at all
+        # self.data_numpy = self.data.to_numpy()
+        # # self.data_numpy = None
+        # cols = self.data.columns.values.tolist()
+        # self.OPEN = cols.index('Open')
+        # self.HIGH = cols.index('High')
+        # self.LOW = cols.index('Low')
+        # self.CLOSE = cols.index('Close')
+        # self.VOLUME = cols.index('Volume')
 
     def dates(self) -> List[datetime]:
         return [datetime.fromtimestamp(ts) for ts in self.data.index]
@@ -96,6 +101,10 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
                 # skipped sectors
                 continue
 
+            # if future.exchange not in ['CME', 'ICE US', 'NYMEX', 'CME', 'Eurex', 'ICE Europe', 'CBOT', 'CBOE']:
+            # if future.exchange not in ['CME', 'ICE US', 'NYMEX', 'CME', 'CBOT', 'CBOE']:
+            #     continue
+
             meta = Future.MetaData()
             attributes = ['symbol', 'name', 'sector', 'currency', 'exchange', 'big_point', 'margin', 'tick_size']
             for attr in attributes:
@@ -110,6 +119,7 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
             nr_futures += 1
 
     print(f"Nr. futures to be traded: {nr_futures}")
+    assert nr_futures > 0, "No futures to be traded"
 
     # full_date_range = pd.date_range(start=min_date, end=max_date, freq="B")     # "B" = business day
     # trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
@@ -125,23 +135,22 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
     #     # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
     #     future.data_numpy = future.data.to_numpy()
 
+    # here we may use trading calendar instead of business day
     full_date_range = pd.date_range(start=min_date, end=max_date, freq="B")     # "B" = business day
+    # trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
 
-    trading_days = pd.bdate_range(start=full_date_range.min(), end=full_date_range.max())
     for future in tqdm(futures_new, desc='Prepare futures data', colour='green'):
         # print("new:", future_new.symbol)
         future_data = future.data
         future_data = future_data.reindex(full_date_range)
-        # NOTE: Remove time part of index! If not done, the chart of single instrument gets messed-up ?!?
-        future_data.index = future_data.index.date
         # future_data = future_data[future_data.index.isin(full_date_range)]
         future_data.ffill(inplace=True)
         future_data.bfill(inplace=True)
-        # IMPORTANT: replace future data of original Future, but leave first/last date unchanged !!!
+        # IMPORTANT: Replace future data of original Future, but leave first/last date unchanged!
+        #            We use first/last date in the trading strategy
         future.data = future_data
         # future.data_numpy = future.data[['Open', 'High', 'Low', 'Close']].to_numpy()
         future.data.index = pd.to_datetime(future.data.index)      # restore datetime index
-        future.data_numpy = future.data.to_numpy()
 
         # use df.index = df.index.tz_localize(None) ???
 
@@ -149,4 +158,8 @@ def get_futures(start_date='1020-01-01', end_date='3020-01-01', selected_symbols
 
 
 if __name__ == "__main__":
-    get_futures()
+    futures_to_be_traded = get_futures()
+    f = [fut for fut in futures_to_be_traded if fut.symbol == 'ES']
+    print(f[0])
+    print(tabulate(f[0].data, headers='keys', tablefmt='psql'))
+    pass

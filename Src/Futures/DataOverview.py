@@ -200,17 +200,20 @@ def all_futures_info(con):
 
 
 def number_of_records(con):
-    print("Number of records:")
+    print("Number of records by table:")
+    table_records = []
     for table in ['Futures', 'FuturesContracts', 'Contracts', 'ContContracts', 'Forex', 'AllContracts']:
         records = con.sql(f'select count(*) as CNT from {table}').fetchall()[0][0]
-        print(f"\t{table}: {records:,}")
+        table_records.append({'Table': table, 'Records': records})
+        # print(f"\tTable: '{table}': Records: {records:,}")
+    print(tabulate(pd.DataFrame(table_records), headers='keys', tablefmt='psql', intfmt=","))
 
 
 if __name__ == "__main__":
     with duckdb.connect(DBConfig.DUCK_DB, read_only=True) as connection:
         number_of_records(connection)
         nr_contracts(connection)
-        # plot_future_single(connection, '6E')
+        # plot_future_single(connection, 'KC')
         contracts_min_max_date(connection)
         all_futures_info(connection)
 

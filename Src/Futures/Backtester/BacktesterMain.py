@@ -27,6 +27,7 @@ def main():
     report_single = ReportSingle("Single Report").set_backtester(bt)
     bt.add_report(report_single)
 
+    # Optional: add single plot
     # plot_single = PlotSingle("My Single Plot").set_report(report_single)
     # report_single.add_plot(plot_single)
 

@@ -22,8 +22,8 @@ class Strategy(Bb.StrategyBase, ABC):
 
     @abstractmethod
     def init(self):
-        # this is needed because we add columns to instrument.data, so multiple strategies on the
-        # same instrument have to work on instrument copy
+        # This is needed because we add columns to instrument.data, so multiple strategies on the
+        #   same instrument have to work on instrument copy
         self._copied_instruments = deepcopy(self.group.instruments)
 
     def open(self, instrument, idx) -> float:
@@ -42,6 +42,7 @@ class Strategy(Bb.StrategyBase, ABC):
     def volume(self, instrument, idx) -> float:
         return instrument.data['Volume'][idx]
     #
+    # The performance gain using ndarray instead of dataframe is marginal (1-2%)
     # def open(self, instrument, idx) -> float:
     #     return instrument.data_numpy[idx, instrument.OPEN]
     #
